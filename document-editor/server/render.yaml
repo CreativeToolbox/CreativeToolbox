@@ -1,0 +1,14 @@
+services:
+  - runtime: node
+  - type: web
+    name: document-editor-api
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false # This means you'll set it manually in Render dashboard
+      - key: CORS_ORIGIN
+        sync: false # You'll set this to your frontend URL later
