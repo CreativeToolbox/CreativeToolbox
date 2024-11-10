@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Paper, 
   Button, 
@@ -14,6 +14,10 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+
+// Constants for text length limits
+const MIN_CHARS = 10;
+const MAX_CHARS = 1000;
 
 const PopupPaper = styled(Paper)(({ theme }) => ({
   position: 'fixed',
@@ -57,12 +61,25 @@ export default function SelectionPopup({
   }) {
     const [isLoading, setIsLoading] = useState(false);
     const [status, setStatus] = useState(null); // 'success', 'error', or null
+    const [errorMessage, setErrorMessage] = useState('');
+    const [apiStatus, setApiStatus] = useState('unknown'); // 'available', 'unavailable', 'unknown'
+
+    // Calculate character count and validity
+    const charCount = selectedText?.length || 0;
+    const isValidLength = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
   
     if (!position || !selectedText) return null;
   
     const handleRewrite = async () => {
+      if (!isValidLength) {
+        setStatus('error');
+        setErrorMessage(`Text must be between ${MIN_CHARS} and ${MAX_CHARS} characters.`);
+        return;
+      }
+
       setIsLoading(true);
       setStatus(null);
+      setErrorMessage('');
       
       try {
         await onRewrite(selectedText);
@@ -75,12 +92,30 @@ export default function SelectionPopup({
       } catch (error) {
         console.error('Rewrite failed:', error);
         setStatus('error');
-        // Keep error message visible
+        setErrorMessage(getErrorMessage(error));
       } finally {
         setIsLoading(false);
       }
     };
   
+    // Error message helper
+    const getErrorMessage = (error) => {
+      if (!error) return 'An unknown error occurred';
+
+      switch (error.type) {
+        case 'LENGTH_ERROR':
+          return error.message;
+        case 'RATE_LIMIT_ERROR':
+          return error.message;
+        case 'INPUT_ERROR':
+          return 'Please select valid text to rewrite.';
+        case 'API_ERROR':
+          return 'API service error. Please try again later.';
+        default:
+          return error.message || 'Failed to rewrite text. Please try again.';
+      }
+    };
+
     // Adjust position to ensure popup stays within viewport
     const adjustedPosition = {
       x: Math.min(Math.max(position.x, 100), window.innerWidth - 100),
@@ -102,7 +137,7 @@ export default function SelectionPopup({
               variant="contained"
               color={status === 'error' ? 'error' : 'primary'}
               onClick={handleRewrite}
-              disabled={isLoading || status === 'success'}
+              disabled={isLoading || status === 'success' || !isValidLength}
               startIcon={
                 isLoading ? (
                   <CircularProgress size={16} color="inherit" />
@@ -150,6 +185,44 @@ export default function SelectionPopup({
             >
               {status === 'error' ? 'Dismiss' : 'Cancel'}
             </ActionButton>
+
+            {/* Character count indicator */}
+            <Typography 
+              variant="caption" 
+              color={isValidLength ? 'textSecondary' : 'error'}
+              sx={{ 
+                position: 'absolute',
+                bottom: -20,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap',
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                padding: '0 4px',
+                borderRadius: 1
+              }}
+            >
+              {charCount}/{MAX_CHARS}
+            </Typography>
+
+            {/* API Status indicator */}
+            {apiStatus === 'unavailable' && (
+              <Typography 
+                variant="caption" 
+                color="error"
+                sx={{ 
+                  position: 'absolute',
+                  top: -20,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  padding: '0 4px',
+                  borderRadius: 1
+                }}
+              >
+                API service unavailable
+              </Typography>
+            )}
           </PopupPaper>
         </Fade>
   
@@ -169,11 +242,23 @@ export default function SelectionPopup({
         <Snackbar
           open={status === 'error'}
           autoHideDuration={6000}
-          onClose={() => setStatus(null)}
+          onClose={() => {
+            setStatus(null);
+            setErrorMessage('');
+          }}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
-          <Alert severity="error" sx={{ width: '100%' }}>
-            Failed to rewrite text. Please try again.
+          <Alert 
+            severity="error" 
+            sx={{ 
+              width: '100%',
+              '& .MuiAlert-message': {
+                maxWidth: '300px',
+                wordBreak: 'break-word'
+              }
+            }}
+          >
+            {errorMessage || 'Failed to rewrite text. Please try again.'}
           </Alert>
         </Snackbar>
       </>

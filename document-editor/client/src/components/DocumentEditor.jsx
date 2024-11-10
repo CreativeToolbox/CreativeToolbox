@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { getDocument, updateDocument } from '../services/api';
 import SelectionPopup from './SelectionPopup';
+import { rewriteText } from '../services/ai';
 
 // Debounce helper function
 const debounce = (func, wait) => {
@@ -134,22 +135,51 @@ const handleClosePopup = () => {
 
 const handleRewrite = async (text) => {
   try {
-    // Simulate API call
-    await new Promise((resolve, reject) => {
-      // Randomly succeed or fail for testing
-      setTimeout(() => {
-        if (Math.random() > 0.5) {
-          resolve('Rewritten text');
-        } else {
-          reject(new Error('Failed to process text'));
-        }
-      }, 1500);
-    });
+    console.log('Starting rewrite process for text:', text.slice(0, 50) + '...');
+    const rewrittenText = await rewriteText(text);
+    
+    console.log('Received rewritten text:', rewrittenText.slice(0, 50) + '...');
+    
+    // Update the editor content with the rewritten text
+    const newContent = currentDoc.content.replace(text, rewrittenText);
+    setCurrentDoc(prev => ({
+      ...prev,
+      content: newContent
+    }));
     
     return true; // Success
   } catch (error) {
-    console.error('Rewrite failed:', error);
-    throw error; // Propagate error to SelectionPopup
+    console.error('Detailed rewrite error:', {
+      name: error.name,
+      type: error.type,
+      message: error.message,
+      originalError: error.originalError
+    });
+
+    // Handle specific error types
+    let userMessage = 'Failed to rewrite text. ';
+    switch (error.type) {
+      case 'CONFIG_ERROR':
+        userMessage += 'API configuration error. Please contact support.';
+        break;
+      case 'AUTH_ERROR':
+        userMessage += 'Authentication failed. Please check API key.';
+        break;
+      case 'QUOTA_ERROR':
+        userMessage += 'API quota exceeded. Please try again later.';
+        break;
+      case 'NETWORK_ERROR':
+        userMessage += 'Network error. Please check your connection.';
+        break;
+      case 'INPUT_ERROR':
+        userMessage += 'Invalid input. Please try selecting text again.';
+        break;
+      default:
+        userMessage += error.message;
+    }
+
+    // You can pass this message to your UI components
+    throw new Error(userMessage);
   }
 };
 
