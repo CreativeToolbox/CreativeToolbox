@@ -1,18 +1,3 @@
 {
-  "documents": [
-    {
-      "_id": "1731201676831",
-      "title": "oh my gosh",
-      "content": "<p>hi</p>",
-      "createdAt": 1731201676831,
-      "updatedAt": 1731201685251
-    },
-    {
-      "_id": "1731201883737",
-      "title": "hey ",
-      "content": "<p>hi</p>",
-      "createdAt": 1731201883737,
-      "updatedAt": 1731202063529
-    }
-  ]
+  "documents": []
 }
