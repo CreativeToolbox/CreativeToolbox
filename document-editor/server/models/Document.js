@@ -1,34 +1,41 @@
-class Document {
-  static validate(doc) {
-    const errors = [];
+const mongoose = require('mongoose');
 
-    // Check if title exists and is a string
-    if (!doc.title) {
-      errors.push('Title is required');
-    } else if (typeof doc.title !== 'string') {
-      errors.push('Title must be a string');
-    }
+// Define the schema
+const documentSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: [true, 'Title is required'],
+    trim: true
+  },
+  content: {
+    type: String,
+    default: '',
+    trim: true
+  }
+}, {
+  timestamps: true // This automatically adds createdAt and updatedAt fields
+});
 
-    // Check if content is a string (allowing empty string)
-    if (typeof doc.content !== 'string') {
-      errors.push('Content must be a string');
-    }
+// Add static methods
+documentSchema.statics.validateDocument = function(doc) {
+  const errors = [];
 
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
+  if (!doc.title) {
+    errors.push('Title is required');
+  } else if (typeof doc.title !== 'string') {
+    errors.push('Title must be a string');
   }
 
-  static create(data) {
-    return {
-      _id: Date.now().toString(),
-      title: data.title,
-      content: data.content || '', // Default to empty string if not provided
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
+  if (typeof doc.content !== 'string') {
+    errors.push('Content must be a string');
   }
-}
 
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Create and export the model
+const Document = mongoose.model('Document', documentSchema);
 module.exports = Document;
