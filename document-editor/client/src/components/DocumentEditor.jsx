@@ -12,6 +12,7 @@ import {
   Alert    // Add this
 } from '@mui/material';
 import { getDocument, updateDocument } from '../services/api';
+import SelectionPopup from './SelectionPopup';
 
 // Debounce helper function
 const debounce = (func, wait) => {
@@ -31,7 +32,10 @@ export default function DocumentEditor() {
   const navigate = useNavigate();
   const [currentDoc, setCurrentDoc] = useState({ title: '', content: '' });
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState(''); // Add this for status messages
+  const [saveStatus, setSaveStatus] = useState('');
+  const [selectedText, setSelectedText] = useState('');
+  const [popupPosition, setPopupPosition] = useState(null);
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   useEffect(() => {
     loadDocument();
@@ -91,63 +95,117 @@ export default function DocumentEditor() {
     }
     setSaving(false);
   };
+const handleTextSelection = useCallback(() => {
+  const selection = window.getSelection();
+  const text = selection.toString().trim();
 
-  return (
-    <Paper sx={{ p: 2, height: '90vh', display: 'flex', flexDirection: 'column' }}>
-      <Stack spacing={2} sx={{ height: '100%' }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <TextField
-            fullWidth
-            label="Title"
-            value={currentDoc.title}
-            onChange={handleTitleChange}
-          />
-          <Button 
-            variant="contained" 
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/')}
-          >
-            Back
-          </Button>
-        </Box>
-        
-        {/* Updated ReactQuill container */}
-        <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
-          <ReactQuill
-            theme="snow"
-            value={currentDoc.content}
-            onChange={handleContentChange}
-            style={{ height: 'calc(100% - 42px)' }} // 42px is the toolbar height
-          />
-        </Box>
-      </Stack>
+  if (text) {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    
+    // Enhanced positioning logic
+    const popupHeight = 40; // Approximate height of popup
+    const margin = 15; // Margin from selection
+    
+    setPopupPosition({
+      x: rect.left + (rect.width / 2), // Center horizontally
+      y: rect.top - popupHeight - margin // Position above with margin
+    });
+    setSelectedText(text);
+  } else {
+    setPopupPosition(null);
+    setSelectedText('');
+  }
+}, []);
+
+ // Add selection event listeners
+ useEffect(() => {
+  document.addEventListener('mouseup', handleTextSelection);
   
-      <Snackbar 
-        open={!!saveStatus} 
-        autoHideDuration={2000} 
-        onClose={() => setSaveStatus('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          severity={saveStatus === 'Error saving!' ? 'error' : 'success'} 
-          sx={{ 
-            width: '100%',
-            boxShadow: 2,
-            '& .MuiAlert-message': {
-              fontSize: '1rem',
-              fontWeight: 500
-            }
-          }}
+  return () => {
+    document.removeEventListener('mouseup', handleTextSelection);
+  };
+}, [handleTextSelection]);
+
+const handleClosePopup = () => {
+  setPopupPosition(null);
+  setSelectedText('');
+};
+
+const handleRewrite = async (text) => {
+  try {
+    // Simulate API call
+    await new Promise((resolve, reject) => {
+      // Randomly succeed or fail for testing
+      setTimeout(() => {
+        if (Math.random() > 0.5) {
+          resolve('Rewritten text');
+        } else {
+          reject(new Error('Failed to process text'));
+        }
+      }, 1500);
+    });
+    
+    return true; // Success
+  } catch (error) {
+    console.error('Rewrite failed:', error);
+    throw error; // Propagate error to SelectionPopup
+  }
+};
+
+return (
+  <Paper sx={{ p: 2, height: '90vh', display: 'flex', flexDirection: 'column' }}>
+    <Stack spacing={2} sx={{ height: '100%' }}>
+      {/* Your existing editor content */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          fullWidth
+          label="Title"
+          value={currentDoc.title}
+          onChange={handleTitleChange}
+        />
+        <Button 
+          variant="contained" 
+          onClick={handleSave}
+          disabled={saving}
         >
-          {saveStatus}
-        </Alert>
-      </Snackbar>
-    </Paper>
-  );
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+        <Button 
+          variant="outlined" 
+          onClick={() => navigate('/')}
+        >
+          Back
+        </Button>
+      </Box>
+      
+      <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
+        <ReactQuill
+          theme="snow"
+          value={currentDoc.content}
+          onChange={handleContentChange}
+          style={{ height: 'calc(100% - 42px)' }}
+        />
+      </Box>
+    </Stack>
+
+    <SelectionPopup 
+      position={popupPosition}
+      selectedText={selectedText}
+      onClose={handleClosePopup}
+      onRewrite={handleRewrite}
+    />
+
+    <Snackbar 
+      open={!!saveStatus} 
+      autoHideDuration={2000} 
+      onClose={() => setSaveStatus('')}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert severity={saveStatus === 'Error saving!' ? 'error' : 'success'}>
+        {saveStatus}
+      </Alert>
+    </Snackbar>
+  </Paper>
+);
 }

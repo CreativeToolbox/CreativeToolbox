@@ -1,6 +1,5 @@
 import { AppBar, Toolbar, Typography, Container } from '@mui/material';
 import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
 
 export default function Layout() {
   return (
