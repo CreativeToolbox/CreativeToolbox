@@ -36,7 +36,8 @@ export default function DocumentEditor() {
   const [saveStatus, setSaveStatus] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [popupPosition, setPopupPosition] = useState(null);
-  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [lastEdit, setLastEdit] = useState(null);
+const [showUndo, setShowUndo] = useState(false);
 
   useEffect(() => {
     loadDocument();
@@ -96,28 +97,35 @@ export default function DocumentEditor() {
     }
     setSaving(false);
   };
-const handleTextSelection = useCallback(() => {
-  const selection = window.getSelection();
-  const text = selection.toString().trim();
 
-  if (text) {
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    
-    // Enhanced positioning logic
-    const popupHeight = 40; // Approximate height of popup
-    const margin = 15; // Margin from selection
-    
-    setPopupPosition({
-      x: rect.left + (rect.width / 2), // Center horizontally
-      y: rect.top - popupHeight - margin // Position above with margin
-    });
-    setSelectedText(text);
-  } else {
-    setPopupPosition(null);
-    setSelectedText('');
-  }
-}, []);
+  const handleTextSelection = useCallback(() => {
+    const selection = window.getSelection();
+    const text = selection.toString().trim();
+  
+    if (text) {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      
+      // Calculate vertical position
+      const yPosition = Math.max(
+        60, // Min top position
+        Math.min(
+          rect.top, // Align with selection top
+          windowHeight - 250 // Max position accounting for popup height
+        )
+      );
+      
+      setPopupPosition({
+        x: 0, // Not used for horizontal positioning anymore
+        y: yPosition
+      });
+      setSelectedText(text);
+    } else {
+      setPopupPosition(null);
+      setSelectedText('');
+    }
+  }, []);
 
  // Add selection event listeners
  useEffect(() => {
@@ -133,60 +141,53 @@ const handleClosePopup = () => {
   setSelectedText('');
 };
 
-const handleRewrite = async (text) => {
+const handleRewrite = async (text, isPreview = false, previewText = null) => {
   try {
-    console.log('Starting rewrite process for text:', text.slice(0, 50) + '...');
-    const rewrittenText = await rewriteText(text);
-    
-    console.log('Received rewritten text:', rewrittenText.slice(0, 50) + '...');
-    
-    // Update the editor content with the rewritten text
-    const newContent = currentDoc.content.replace(text, rewrittenText);
+    if (isPreview) {
+      const rewrittenText = await rewriteText(text);
+      return rewrittenText;
+    } else {
+      if (previewText) {
+        // Store the previous state before making changes
+        setLastEdit({
+          originalText: text,
+          newText: previewText,
+          position: currentDoc.content.indexOf(text)
+        });
+        
+        const newContent = currentDoc.content.replace(text, previewText);
+        setCurrentDoc(prev => ({
+          ...prev,
+          content: newContent
+        }));
+        
+        // Show undo option
+        setShowUndo(true);
+        return true;
+      }
+    }
+  } catch (error) {
+    console.error('Rewrite failed:', error);
+    throw error;
+  }
+};
+
+const handleUndo = () => {
+  if (lastEdit) {
+    const newContent = currentDoc.content.replace(lastEdit.newText, lastEdit.originalText);
     setCurrentDoc(prev => ({
       ...prev,
       content: newContent
     }));
-    
-    return true; // Success
-  } catch (error) {
-    console.error('Detailed rewrite error:', {
-      name: error.name,
-      type: error.type,
-      message: error.message,
-      originalError: error.originalError
-    });
-
-    // Handle specific error types
-    let userMessage = 'Failed to rewrite text. ';
-    switch (error.type) {
-      case 'CONFIG_ERROR':
-        userMessage += 'API configuration error. Please contact support.';
-        break;
-      case 'AUTH_ERROR':
-        userMessage += 'Authentication failed. Please check API key.';
-        break;
-      case 'QUOTA_ERROR':
-        userMessage += 'API quota exceeded. Please try again later.';
-        break;
-      case 'NETWORK_ERROR':
-        userMessage += 'Network error. Please check your connection.';
-        break;
-      case 'INPUT_ERROR':
-        userMessage += 'Invalid input. Please try selecting text again.';
-        break;
-      default:
-        userMessage += error.message;
-    }
-
-    // You can pass this message to your UI components
-    throw new Error(userMessage);
+    setLastEdit(null);
+    setShowUndo(false);
   }
 };
 
 return (
   <Paper sx={{ p: 2, height: '90vh', display: 'flex', flexDirection: 'column' }}>
     <Stack spacing={2} sx={{ height: '100%' }}>
-      {/* Your existing editor content */}
+      {/* Title and Buttons */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
           fullWidth
@@ -209,6 +210,7 @@ return (
         </Button>
       </Box>
       
+      {/* Editor */}
       <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
         <ReactQuill
           theme="snow"
@@ -219,6 +221,7 @@ return (
       </Box>
     </Stack>
 
+    {/* Selection Popup */}
     <SelectionPopup 
       position={popupPosition}
       selectedText={selectedText}
@@ -226,6 +229,7 @@ return (
       onRewrite={handleRewrite}
     />
 
+    {/* Save Status Snackbar */}
     <Snackbar 
       open={!!saveStatus} 
       autoHideDuration={2000} 
@@ -234,6 +238,30 @@ return (
     >
       <Alert severity={saveStatus === 'Error saving!' ? 'error' : 'success'}>
         {saveStatus}
+      </Alert>
+    </Snackbar>
+
+    {/* Undo Snackbar */}
+    <Snackbar
+      open={showUndo}
+      autoHideDuration={10000}
+      onClose={() => setShowUndo(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      sx={{ bottom: { xs: 90, sm: 24 } }}
+    >
+      <Alert 
+        severity="info"
+        action={
+          <Button 
+            color="inherit" 
+            size="small" 
+            onClick={handleUndo}
+          >
+            UNDO
+          </Button>
+        }
+      >
+        Text rewritten
       </Alert>
     </Snackbar>
   </Paper>

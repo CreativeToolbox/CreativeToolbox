@@ -6,9 +6,8 @@ export default function Layout() {
     <>
       <AppBar position="static">
         <Toolbar>
-          {/* <Sidebar />  */}
           <Typography variant="h6">
-            Document Editor
+            Creative Toolbox
           </Typography>
         </Toolbar>
       </AppBar>
