@@ -17,11 +17,16 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import { getDocuments, createDocument, deleteDocument } from '../services/api';
+import { Alert, Snackbar } from '@mui/material';
 
 export default function DocumentList() {
   const [documents, setDocuments] = useState([]);
   const [isApiSleeping, setIsApiSleeping] = useState(false);
   const navigate = useNavigate();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [showUndoDelete, setShowUndoDelete] = useState(false);
+  const [deletedDoc, setDeletedDoc] = useState(null);
 
   const isApiInactiveError = (error) => {
     return (
@@ -67,13 +72,42 @@ export default function DocumentList() {
     }
   };
 
-  const handleDeleteDocument = async (id, event) => {
-    event.stopPropagation();
+  const handleDeleteConfirm = async () => {
+    if (!documentToDelete) return;
+    
     try {
-      await deleteDocument(id);
-      setDocuments(prev => prev.filter(doc => doc._id !== id));
+      await deleteDocument(documentToDelete._id);  // Just pass the ID
+      setDeletedDoc(documentToDelete);
+      setDocuments(prev => prev.filter(doc => doc._id !== documentToDelete._id));
+      setShowUndoDelete(true);
     } catch (error) {
       console.error('Error deleting document:', error);
+      if (isApiInactiveError(error)) {
+        setIsApiSleeping(true);
+      }
+    } finally {
+      setDeleteConfirmOpen(false);
+      setDocumentToDelete(null);
+    }
+  };
+  
+  const handleUndoDelete = async () => {
+    if (!deletedDoc) return;
+    
+    try {
+      // First restore in the backend
+      const response = await createDocument({
+        _id: deletedDoc._id,
+        title: deletedDoc.title,
+        content: deletedDoc.content
+      });
+      
+      // Then update local state
+      setDocuments(prev => [response.data, ...prev]);
+      setDeletedDoc(null);
+      setShowUndoDelete(false);
+    } catch (error) {
+      console.error('Error restoring document:', error);
       if (isApiInactiveError(error)) {
         setIsApiSleeping(true);
       }
@@ -84,7 +118,7 @@ export default function DocumentList() {
     <>
       <Paper sx={{ p: 2 }}>
         <Typography variant="h5" gutterBottom>
-          My Documents
+          My Stories
         </Typography>
         <Button 
           variant="contained" 
@@ -113,7 +147,11 @@ export default function DocumentList() {
               <IconButton 
                 edge="end" 
                 aria-label="delete"
-                onClick={(e) => handleDeleteDocument(doc._id, e)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDocumentToDelete(doc);
+                  setDeleteConfirmOpen(true);
+                }}
                 color="error"
               >
                 <DeleteIcon />
@@ -122,7 +160,7 @@ export default function DocumentList() {
           ))}
         </List>
       </Paper>
-
+  
       {/* API Wake Up Dialog */}
       <Dialog
         open={isApiSleeping}
@@ -168,6 +206,61 @@ export default function DocumentList() {
           </Button>
         </DialogActions>
       </Dialog>
+  
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+      >
+        <DialogTitle>Delete Document?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{documentToDelete?.title}"? 
+            You'll have a chance to undo this action.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteConfirmOpen(false)}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+  
+      {/* Undo Delete Snackbar */}
+      <Snackbar
+        open={showUndoDelete}
+        autoHideDuration={6000}
+        onClose={() => {
+          setShowUndoDelete(false);
+          setDeletedDoc(null);
+        }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert 
+          severity="warning"
+          action={
+            <Button 
+              color="inherit" 
+              size="small"
+              onClick={handleUndoDelete}
+            >
+              UNDO
+            </Button>
+          }
+        >
+          Document deleted
+        </Alert>
+      </Snackbar>
     </>
   );
 }
