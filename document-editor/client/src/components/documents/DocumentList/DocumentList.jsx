@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
-import { getDocuments, createDocument, deleteDocument } from '../services/api';
+import { getDocuments, createDocument, deleteDocument } from '../../../services/api';
 import { Alert, Snackbar } from '@mui/material';
 
 export default function DocumentList() {

@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import DocumentList from './components/DocumentList';
+import DocumentList from './components/documents/DocumentList/DocumentList';
 import DocumentEditor from './components/DocumentEditor';
 
 function App() {
