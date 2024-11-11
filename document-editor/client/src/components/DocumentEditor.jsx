@@ -141,34 +141,73 @@ const handleClosePopup = () => {
   setSelectedText('');
 };
 
-const handleRewrite = async (text, isPreview = false, previewText = null) => {
+const handleRewrite = async (text, options = {}) => {
   try {
-    if (isPreview) {
-      const rewrittenText = await rewriteText(text);
+    if (options.isPreview) {
+      // Generate preview
+      const rewrittenText = await rewriteText(text, options);
       return rewrittenText;
     } else {
-      if (previewText) {
-        // Store the previous state before making changes
-        setLastEdit({
-          originalText: text,
-          newText: previewText,
-          position: currentDoc.content.indexOf(text)
-        });
-        
-        const newContent = currentDoc.content.replace(text, previewText);
-        setCurrentDoc(prev => ({
-          ...prev,
-          content: newContent
-        }));
-        
-        // Show undo option
-        setShowUndo(true);
-        return true;
+      // Use the preview text for the final rewrite
+      const finalText = options.previewText;
+      
+      // Store the previous state for undo
+      setLastEdit({
+        originalText: text,
+        newText: finalText,
+        position: currentDoc.content.indexOf(text)
+      });
+      
+      // Update document with the preview text
+      const newContent = currentDoc.content.replace(text, finalText);
+      const updatedDoc = {
+        ...currentDoc,
+        content: newContent
+      };
+      
+      setCurrentDoc(updatedDoc);
+
+      // Trigger autosave
+      if (options.triggerAutoSave) {
+        try {
+          setSaving(true);
+          setSaveStatus('Saving...');
+          await updateDocument(id, updatedDoc);
+          setSaveStatus('Saved!');
+          setShowUndo(true); // Show undo option
+        } catch (error) {
+          console.error('Autosave failed after rewrite:', error);
+          setSaveStatus('Error saving!');
+        } finally {
+          setSaving(false);
+          // Clear save status after 2 seconds
+          setTimeout(() => setSaveStatus(''), 2000);
+        }
       }
+      
+      return true;
     }
   } catch (error) {
     console.error('Rewrite failed:', error);
     throw error;
+  }
+};
+
+// Add this if you don't have it already
+const handleAutoSave = async (docToSave) => {
+  if (!docToSave) return;
+  
+  try {
+    setIsSaving(true);
+    await saveDocument(docToSave);
+    setLastSavedContent(docToSave.content);
+    setSaveStatus('success');
+  } catch (error) {
+    console.error('Autosave failed:', error);
+    setSaveStatus('error');
+    throw error;
+  } finally {
+    setIsSaving(false);
   }
 };
 
