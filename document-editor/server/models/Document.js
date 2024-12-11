@@ -11,9 +11,16 @@ const documentSchema = new mongoose.Schema({
     type: String,
     default: '',
     trim: true
+  },
+  // Add a flag to enable/disable character tracking
+  enableCharacterTracking: {
+    type: Boolean,
+    default: true
   }
 }, {
-  timestamps: true // This automatically adds createdAt and updatedAt fields
+  timestamps: true,
+  toJSON: { virtuals: true }, // Enable virtuals when converting to JSON
+  toObject: { virtuals: true }
 });
 
 // Add static methods
@@ -34,6 +41,19 @@ documentSchema.statics.validateDocument = function(doc) {
     isValid: errors.length === 0,
     errors
   };
+};
+
+// Add virtual for characters (this creates the relationship without storing it in the document)
+documentSchema.virtual('characters', {
+  ref: 'Character',
+  localField: '_id',
+  foreignField: 'document'
+});
+
+// Add method to get all characters
+documentSchema.methods.getCharacters = async function() {
+  await this.populate('characters');
+  return this.characters;
 };
 
 // Create and export the model

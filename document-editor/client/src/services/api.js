@@ -29,3 +29,33 @@ export const deleteDocument = (id) => api.delete(`/documents/${id}`);
 
 // Optional: Add health check endpoint
 export const checkApiHealth = () => api.get('/health');
+
+// Get all characters for a document
+export const getDocumentCharacters = async (documentId) => {
+  return axios.get(`${API_BASE_URL}/characters/document/${documentId}`);
+};
+
+// Get a single character
+export const getCharacter = async (characterId) => {
+  return axios.get(`${API_BASE_URL}/characters/${characterId}`);
+};
+
+// Create a new character
+export const createCharacter = async (characterData) => {
+  return axios.post(`${API_BASE_URL}/characters`, characterData);
+};
+
+// Update a character
+export const updateCharacter = async (characterId, updates) => {
+  return axios.put(`${API_BASE_URL}/characters/${characterId}`, updates);
+};
+
+// Delete a character
+export const deleteCharacter = async (characterId) => {
+  return axios.delete(`${API_BASE_URL}/characters/${characterId}`);
+};
+
+// Toggle character tracking for a document
+export const toggleCharacterTracking = async (documentId, enabled) => {
+  return axios.post(`${API_BASE_URL}/characters/document/${documentId}/tracking`, { enabled });
+};

@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+const documentsRouter = require('./routes/documents');
+const charactersRouter = require('./routes/characters');
 
 // Initialize express app
 const app = express();
@@ -53,7 +55,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Routes
-app.use('/api/documents', require('./routes/documents'));
+app.use('/api/documents', documentsRouter);
+app.use('/api/characters', charactersRouter);
 
 // Basic route for API health check
 app.get('/api/health', (req, res) => {

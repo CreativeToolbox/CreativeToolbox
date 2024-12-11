@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { getDocument, updateDocument } from '../services/api';
 import SelectionPopup from './SelectionPopup';
+import ToolboxSidebar from './creative-toolbox/ToolboxSidebar';
 import { rewriteText } from '../services/ai';
 
 // Debounce helper function
@@ -42,9 +43,15 @@ export default function DocumentEditor() {
   const [lastEdit, setLastEdit] = useState(null);
 const [showUndo, setShowUndo] = useState(false);
 
+  // Add state for character tracking
+  const [characterTrackingEnabled, setCharacterTrackingEnabled] = useState(true);
+
   useEffect(() => {
     if (!location.state?.document) {
       loadDocument();
+    } else {
+      setCurrentDoc(location.state.document);
+      setCharacterTrackingEnabled(location.state.document.enableCharacterTracking);
     }
   }, [id, location.state]);
 
@@ -52,6 +59,7 @@ const [showUndo, setShowUndo] = useState(false);
     try {
       const response = await getDocument(id);
       setCurrentDoc(response.data);
+      setCharacterTrackingEnabled(response.data.enableCharacterTracking);
     } catch (error) {
       console.error('Error loading document:', error);
       navigate('/');
@@ -244,7 +252,15 @@ const handleUndo = () => {
 };
 
 return (
-  <Paper sx={{ p: 2, height: '90vh', display: 'flex', flexDirection: 'column' }}>
+  <Paper sx={{ 
+    p: 2, 
+    height: '90vh', 
+    display: 'flex', 
+    flexDirection: 'column',
+    mr: '32px', // Space for the sidebar toggle
+    position: 'relative', // Add this
+    zIndex: 1, // Add this to ensure proper stacking
+  }}>
     <Stack spacing={2} sx={{ height: '100%' }}>
       {/* Title and Buttons */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -286,6 +302,12 @@ return (
       selectedText={selectedText}
       onClose={handleClosePopup}
       onRewrite={handleRewrite}
+    />
+
+    {/* Add ToolboxSidebar */}
+    <ToolboxSidebar 
+      documentId={id}
+      enabled={characterTrackingEnabled}
     />
 
     {/* Save Status Snackbar */}
