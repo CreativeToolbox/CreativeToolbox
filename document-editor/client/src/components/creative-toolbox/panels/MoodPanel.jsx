@@ -6,7 +6,6 @@ import {
   Stack,
   Select,
   MenuItem,
-  TextField,
   Alert,
   CircularProgress,
   Fade
@@ -14,28 +13,21 @@ import {
 import { getStory, updateStoryMood } from '../../../services/api';
 
 const PRESET_MOODS = {
-  joyful: "Light and uplifting",
-  melancholic: "Thoughtful and introspective",
-  tense: "Suspenseful and anxious",
+  happy: "Light and uplifting",
+  sad: "Thoughtful and introspective",
+  angry: "Intense and forceful",
   peaceful: "Calm and serene",
+  tense: "Suspenseful and anxious",
   mysterious: "Enigmatic and intriguing",
   romantic: "Passionate and emotional",
-  adventurous: "Exciting and dynamic",
-  dark: "Grim and foreboding",
-  humorous: "Witty and amusing",
-  nostalgic: "Wistful and reminiscent"
+  adventurous: "Exciting and dynamic"
 };
 
 export default function MoodPanel({ documentId }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [mood, setMood] = useState({
-    type: 'preset',
-    preset: 'peaceful',
-    custom: '',
-    description: PRESET_MOODS.peaceful
-  });
+  const [mood, setMood] = useState('peaceful');
 
   useEffect(() => {
     loadStoryMood();
@@ -56,74 +48,14 @@ export default function MoodPanel({ documentId }) {
     }
   };
 
-  const validateCustomMood = (value) => {
-    if (!value) return 'Custom mood is required';
-    if (value.length < 2) return 'Custom mood must be at least 2 characters';
-    if (value.length > 50) return 'Custom mood must be less than 50 characters';
-    if (!/^[a-zA-Z0-9\s-]+$/.test(value)) {
-      return 'Custom mood can only contain letters, numbers, spaces, and hyphens';
-    }
-    return null;
-  };
-
-  const handleMoodChange = async (type, value) => {
-    if (type === 'custom') {
-      setMood(prev => ({
-        ...prev,
-        type: 'custom',
-        custom: value
-      }));
-      return;
-    }
-    
-    const newMood = {
-      ...mood,
-      type,
-      [type]: value,
-      description: type === 'preset' ? PRESET_MOODS[value] : ''
-    };
-    
+  const handleMoodChange = async (newMood) => {
     setMood(newMood);
     setSaving(true);
     
     try {
-      if (type === 'custom') {
-        const error = validateCustomMood(value);
-        if (error) {
-          setError(error);
-          return;
-        }
-      }
-      
       await updateStoryMood(documentId, newMood);
       setError(null);
     } catch (err) {
-      setError('Failed to save mood changes');
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCustomMoodSave = async () => {
-    console.log('Attempting to save custom mood:', mood);
-    const error = validateCustomMood(mood.custom);
-    if (error) {
-      setError(error);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const response = await updateStoryMood(documentId, {
-        type: 'custom',
-        custom: mood.custom,
-        description: 'Custom mood setting'
-      });
-      console.log('Save response:', response);
-      setError(null);
-    } catch (err) {
-      console.error('Save error details:', err.response?.data);
       setError('Failed to save mood changes');
       console.error(err);
     } finally {
@@ -166,15 +98,8 @@ export default function MoodPanel({ documentId }) {
         <Box>
           <Select
             fullWidth
-            value={mood.type === 'preset' ? mood.preset : 'custom'}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value === 'custom') {
-                handleMoodChange('custom', mood.custom || '');
-              } else {
-                handleMoodChange('preset', value);
-              }
-            }}
+            value={mood}
+            onChange={(e) => handleMoodChange(e.target.value)}
             sx={{ mb: 2 }}
           >
             {Object.entries(PRESET_MOODS).map(([key, description]) => (
@@ -182,19 +107,7 @@ export default function MoodPanel({ documentId }) {
                 {key.charAt(0).toUpperCase() + key.slice(1)}
               </MenuItem>
             ))}
-            <MenuItem value="custom">Custom Mood</MenuItem>
           </Select>
-
-          {mood.type === 'custom' && (
-            <TextField
-              fullWidth
-              label="Custom Mood"
-              value={mood.custom}
-              onChange={(e) => handleMoodChange('custom', e.target.value)}
-              onBlur={handleCustomMoodSave}
-              sx={{ mb: 2 }}
-            />
-          )}
 
           <Typography 
             variant="body2" 
@@ -205,7 +118,7 @@ export default function MoodPanel({ documentId }) {
               transition: 'opacity 0.2s'
             }}
           >
-            {mood.type === 'preset' ? PRESET_MOODS[mood.preset] : 'Custom mood setting'}
+            {PRESET_MOODS[mood]}
           </Typography>
         </Box>
       </Stack>

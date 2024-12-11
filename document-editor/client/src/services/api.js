@@ -75,3 +75,12 @@ export const updateStoryMood = async (documentId, mood) => {
     { mood }
   );
 };
+
+// Add this new export for story mode updates
+export const updateStoryMode = async (documentId, modeData) => {
+  console.log('Updating story mode:', { documentId, modeData });
+  return axios.put(
+    `${API_BASE_URL}/stories/document/${documentId}/mode`, 
+    modeData
+  );
+};

@@ -47,11 +47,12 @@ exports.updateMood = async (req, res) => {
     const documentId = req.params.documentId;
     const { mood } = req.body;
 
-    console.log('Received mood update:', { documentId, mood, validMoods: VALID_MOOD_PRESETS });
+    console.log('Received mood update:', { documentId, mood });
 
     if (!mood || !VALID_MOOD_PRESETS.includes(mood)) {
       return res.status(400).json({ 
-        error: `Invalid mood preset. Must be one of: ${VALID_MOOD_PRESETS.join(', ')}` 
+        error: `Invalid mood preset. Must be one of: ${VALID_MOOD_PRESETS.join(', ')}`,
+        receivedMood: mood
       });
     }
 
