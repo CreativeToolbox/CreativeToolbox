@@ -1,5 +1,18 @@
 const Story = require('../models/Story');
 
+const VALID_MOOD_PRESETS = Object.freeze([
+    'happy',
+    'sad',
+    'angry',
+    'peaceful',
+    'tense',
+    'mysterious',
+    'romantic',
+    'adventurous'
+]);
+
+exports.VALID_MOOD_PRESETS = VALID_MOOD_PRESETS;
+
 exports.getStory = async (req, res) => {
   try {
     const story = await Story.ensureStoryExists(req.params.documentId);
@@ -31,57 +44,29 @@ exports.updateMode = async (req, res) => {
 
 exports.updateMood = async (req, res) => {
   try {
-    const { type, preset, custom, description } = req.body;
+    const documentId = req.params.documentId;
+    const { mood } = req.body;
 
-    // Validate input
-    if (!type || !['preset', 'custom'].includes(type)) {
+    console.log('Received mood update:', { documentId, mood, validMoods: VALID_MOOD_PRESETS });
+
+    if (!mood || !VALID_MOOD_PRESETS.includes(mood)) {
       return res.status(400).json({ 
-        message: 'Invalid mood type. Must be either "preset" or "custom".' 
+        error: `Invalid mood preset. Must be one of: ${VALID_MOOD_PRESETS.join(', ')}` 
       });
     }
 
-    if (type === 'preset' && !VALID_MOOD_PRESETS.includes(preset)) {
-      return res.status(400).json({ 
-        message: 'Invalid preset mood value.' 
-      });
-    }
-
-    if (type === 'custom') {
-      if (!custom || custom.length < 2 || custom.length > 50) {
-        return res.status(400).json({ 
-          message: 'Custom mood must be between 2 and 50 characters.' 
-        });
-      }
-      
-      if (!/^[a-zA-Z0-9\s-]+$/.test(custom)) {
-        return res.status(400).json({ 
-          message: 'Custom mood can only contain letters, numbers, spaces, and hyphens.' 
-        });
-      }
-    }
-
-    const story = await Story.findOneAndUpdate(
-      { document: req.params.documentId },
-      { 
-        $set: { 
-          'mood.type': type,
-          'mood.preset': type === 'preset' ? preset : undefined,
-          'mood.custom': type === 'custom' ? custom : undefined,
-          'mood.description': description
-        }
-      },
-      { new: true, upsert: true, runValidators: true }
+    const updatedStory = await Story.findOneAndUpdate(
+      { document: documentId },
+      { mood },
+      { new: true, upsert: true }
     );
-    
-    res.json(story);
+
+    console.log('Updated story:', updatedStory);
+    res.json(updatedStory);
   } catch (error) {
     console.error('Error in updateMood:', error);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        message: 'Validation Error', 
-        errors: Object.values(error.errors).map(e => e.message) 
-      });
-    }
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      error: 'Failed to update mood' 
+    });
   }
 }; 

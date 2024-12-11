@@ -68,11 +68,12 @@ export default function MoodPanel({ documentId }) {
 
   const handleMoodChange = async (type, value) => {
     if (type === 'custom') {
-      const error = validateCustomMood(value);
-      if (error) {
-        setError(error);
-        return;
-      }
+      setMood(prev => ({
+        ...prev,
+        type: 'custom',
+        custom: value
+      }));
+      return;
     }
     
     const newMood = {
@@ -86,9 +87,43 @@ export default function MoodPanel({ documentId }) {
     setSaving(true);
     
     try {
+      if (type === 'custom') {
+        const error = validateCustomMood(value);
+        if (error) {
+          setError(error);
+          return;
+        }
+      }
+      
       await updateStoryMood(documentId, newMood);
       setError(null);
     } catch (err) {
+      setError('Failed to save mood changes');
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCustomMoodSave = async () => {
+    console.log('Attempting to save custom mood:', mood);
+    const error = validateCustomMood(mood.custom);
+    if (error) {
+      setError(error);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await updateStoryMood(documentId, {
+        type: 'custom',
+        custom: mood.custom,
+        description: 'Custom mood setting'
+      });
+      console.log('Save response:', response);
+      setError(null);
+    } catch (err) {
+      console.error('Save error details:', err.response?.data);
       setError('Failed to save mood changes');
       console.error(err);
     } finally {
@@ -156,6 +191,7 @@ export default function MoodPanel({ documentId }) {
               label="Custom Mood"
               value={mood.custom}
               onChange={(e) => handleMoodChange('custom', e.target.value)}
+              onBlur={handleCustomMoodSave}
               sx={{ mb: 2 }}
             />
           )}

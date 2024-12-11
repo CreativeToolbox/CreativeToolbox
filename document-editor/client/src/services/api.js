@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://document-editor-api.onrender.com/api';
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api'  // Local development
+  : 'https://document-editor-api.onrender.com/api'; // Production
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -66,11 +68,10 @@ export const getStory = async (documentId) => {
   return axios.get(`${API_BASE_URL}/stories/document/${documentId}`);
 };
 
-export const updateStoryMode = async (documentId, modeData) => {
-  return axios.put(`${API_BASE_URL}/stories/document/${documentId}/mode`, modeData);
-};
-
-export const updateStoryMood = async (documentId, moodData) => {
-  console.log('Updating story mood:', { documentId, moodData });
-  return axios.put(`${API_BASE_URL}/stories/document/${documentId}/mood`, moodData);
+export const updateStoryMood = async (documentId, mood) => {
+  console.log('Updating story mood:', { documentId, mood });
+  return axios.put(
+    `${API_BASE_URL}/stories/document/${documentId}/mood`, 
+    { mood }
+  );
 };
