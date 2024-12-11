@@ -79,7 +79,7 @@ export default function ModePanel({ documentId }) {
 
   return (
     <Paper sx={{ p: 2 }}>
-      <Stack spacing={3}>
+      <Stack spacing={3} alignItems="center">
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="h6" gutterBottom>
             Story Mode
@@ -95,13 +95,16 @@ export default function ModePanel({ documentId }) {
           <Alert 
             severity="error" 
             onClose={() => setError(null)}
-            sx={{ mb: 2 }}
+            sx={{ mb: 2, width: '100%' }}
           >
             {error}
           </Alert>
         )}
 
-        <Box>
+        <Box sx={{ 
+          width: '80%',
+          maxWidth: '400px',
+        }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -141,7 +144,11 @@ export default function ModePanel({ documentId }) {
           />
         </Box>
 
-        <Box sx={{ mt: 2 }}>
+        <Box sx={{ 
+          mt: 2,
+          textAlign: 'center',
+          maxWidth: '400px'
+        }}>
           <Typography 
             variant="body2" 
             color="text.secondary"

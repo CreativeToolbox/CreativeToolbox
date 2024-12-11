@@ -69,3 +69,8 @@ export const getStory = async (documentId) => {
 export const updateStoryMode = async (documentId, modeData) => {
   return axios.put(`${API_BASE_URL}/stories/document/${documentId}/mode`, modeData);
 };
+
+export const updateStoryMood = async (documentId, moodData) => {
+  console.log('Updating story mood:', { documentId, moodData });
+  return axios.put(`${API_BASE_URL}/stories/document/${documentId}/mood`, moodData);
+};

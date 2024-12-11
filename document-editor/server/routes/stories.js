@@ -9,5 +9,6 @@ router.get('/document/:documentId', (req, res, next) => {
 });
 
 router.put('/document/:documentId/mode', storyController.updateMode);
+router.put('/document/:documentId/mood', storyController.updateMood);
 
 module.exports = router; 

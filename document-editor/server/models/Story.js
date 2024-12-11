@@ -15,6 +15,12 @@ const storySchema = new mongoose.Schema({
       type: Number,
       default: 50
     }
+  },
+  mood: {
+    type: { type: String, enum: ['preset', 'custom'] },
+    preset: String,
+    custom: String,
+    description: String
   }
 }, {
   timestamps: true
