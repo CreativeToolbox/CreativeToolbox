@@ -22,7 +22,7 @@ export default function Layout() {
       <AppBar position="static">
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Typography variant="h6">
-            Creative Toolbox
+            Narrativa
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 1 }}>

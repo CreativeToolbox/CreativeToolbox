@@ -56,7 +56,25 @@ export default function MoodPanel({ documentId }) {
     }
   };
 
+  const validateCustomMood = (value) => {
+    if (!value) return 'Custom mood is required';
+    if (value.length < 2) return 'Custom mood must be at least 2 characters';
+    if (value.length > 50) return 'Custom mood must be less than 50 characters';
+    if (!/^[a-zA-Z0-9\s-]+$/.test(value)) {
+      return 'Custom mood can only contain letters, numbers, spaces, and hyphens';
+    }
+    return null;
+  };
+
   const handleMoodChange = async (type, value) => {
+    if (type === 'custom') {
+      const error = validateCustomMood(value);
+      if (error) {
+        setError(error);
+        return;
+      }
+    }
+    
     const newMood = {
       ...mood,
       type,

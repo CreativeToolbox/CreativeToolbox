@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+// Define valid presets as a constant
+const VALID_MOOD_PRESETS = [
+  'joyful', 'melancholic', 'tense', 'peaceful', 'mysterious',
+  'romantic', 'adventurous', 'dark', 'humorous', 'nostalgic'
+];
+
 const storySchema = new mongoose.Schema({
   document: {
     type: mongoose.Schema.Types.ObjectId,
@@ -17,9 +23,28 @@ const storySchema = new mongoose.Schema({
     }
   },
   mood: {
-    type: { type: String, enum: ['preset', 'custom'] },
-    preset: String,
-    custom: String,
+    type: { 
+      type: String, 
+      enum: ['preset', 'custom'],
+      required: true
+    },
+    preset: {
+      type: String,
+      enum: VALID_MOOD_PRESETS,
+      required: function() { return this.mood.type === 'preset'; }
+    },
+    custom: {
+      type: String,
+      validate: {
+        validator: function(v) {
+          if (this.mood.type === 'custom') {
+            return v && v.length >= 2 && v.length <= 50 && /^[a-zA-Z0-9\s-]+$/.test(v);
+          }
+          return true;
+        },
+        message: 'Custom mood must be 2-50 characters long and contain only letters, numbers, spaces, and hyphens'
+      }
+    },
     description: String
   }
 }, {
