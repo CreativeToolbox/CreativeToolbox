@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { 
@@ -31,7 +31,10 @@ const debounce = (func, wait) => {
 export default function DocumentEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [currentDoc, setCurrentDoc] = useState({ title: '', content: '' });
+  const location = useLocation();
+  const [currentDoc, setCurrentDoc] = useState(() => {
+    return location.state?.document || { title: '', content: '' };
+  });
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [selectedText, setSelectedText] = useState('');
@@ -40,8 +43,10 @@ export default function DocumentEditor() {
 const [showUndo, setShowUndo] = useState(false);
 
   useEffect(() => {
-    loadDocument();
-  }, [id]);
+    if (!location.state?.document) {
+      loadDocument();
+    }
+  }, [id, location.state]);
 
   const loadDocument = async () => {
     try {
@@ -56,17 +61,22 @@ const [showUndo, setShowUndo] = useState(false);
   // Create memoized autoSave function
   const autoSave = useCallback(
     debounce(async (docData) => {
+      if (!docData.title.trim()) {
+        setSaveStatus('Title is required');
+        return;
+      }
+      
       setSaving(true);
       setSaveStatus('Saving...');
       try {
-        await updateDocument(id, docData);
+        const response = await updateDocument(id, docData);
+        setCurrentDoc(response.data);
         setSaveStatus('Saved!');
       } catch (error) {
         console.error('Error auto-saving:', error);
         setSaveStatus('Error saving!');
       } finally {
         setSaving(false);
-        // Clear "Saved!" message after 2 seconds
         setTimeout(() => setSaveStatus(''), 2000);
       }
     }, 1000),
@@ -74,9 +84,14 @@ const [showUndo, setShowUndo] = useState(false);
   );
 
   const handleTitleChange = (event) => {
-    const newDoc = { ...currentDoc, title: event.target.value };
-    setCurrentDoc(newDoc);
-    autoSave(newDoc);
+    const newTitle = event.target.value;
+    if (newTitle.trim()) {
+      const newDoc = { ...currentDoc, title: newTitle };
+      setCurrentDoc(newDoc);
+      autoSave(newDoc);
+    } else {
+      setCurrentDoc(prev => ({ ...prev, title: newTitle }));
+    }
   };
 
   const handleContentChange = (content) => {
@@ -105,20 +120,25 @@ const [showUndo, setShowUndo] = useState(false);
     if (text) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
       
-      // Calculate vertical position
-      const yPosition = Math.max(
-        60, // Min top position
+      // Get viewport dimensions
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      // Calculate horizontal position, keeping popup within viewport bounds
+      const popupWidth = 600; // Width of the popup
+      const horizontalCenter = rect.left + (rect.width / 2);
+      const leftPosition = Math.max(
+        popupWidth / 2, // Don't let it go off screen left
         Math.min(
-          rect.top, // Align with selection top
-          windowHeight - 250 // Max position accounting for popup height
+          horizontalCenter,
+          viewportWidth - (popupWidth / 2) // Don't let it go off screen right
         )
       );
-      
+
       setPopupPosition({
-        x: 0, // Not used for horizontal positioning anymore
-        y: yPosition
+        x: leftPosition,
+        y: rect.top, // We'll handle the vertical positioning in the popup component
       });
       setSelectedText(text);
     } else {

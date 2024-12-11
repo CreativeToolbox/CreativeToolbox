@@ -78,35 +78,94 @@ export const rewriteText = async (text, options = {}) => {
     const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
     
     console.log('Getting model...');
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-pro",
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_ONLY_HIGH",
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_ONLY_HIGH",
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_ONLY_HIGH",
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_ONLY_HIGH",
+        },
+      ],
+    });
 
-    // Construct story-focused prompt
-    const prompt = `As a creative writing assistant, help improve this story segment while keeping the content appropriate and family-friendly. Please rewrite with these specifications:
+    // Enhanced prompt with more specific guidance
+    const toneGuidance = {
+      whimsical: 'light-hearted and playful, with a sense of wonder',
+      serious: 'thoughtful and measured, with gravitas',
+      mysterious: 'intriguing and suspenseful, building curiosity',
+      humorous: 'witty and entertaining, with natural humor',
+      dramatic: 'emotionally intense and impactful',
+      adventurous: 'exciting and dynamic, full of energy',
+      neutral: 'balanced and straightforward'
+    };
 
-    Tone: ${tone}
-    Writing Style: ${style}
-    Target Audience: ${audience}
-    Pacing: ${pacing}% (where 0% is slower/detailed and 100% is faster/dynamic)
-    ${keepContext ? 'Important: Maintain appropriate story context and continuity.' : ''}
-    
-    Story segment to revise (maintaining appropriate content):
-    "${text}"
-    
-    Guidelines:
-    - Keep content appropriate for the specified audience
-    - Maintain story coherence
-    - Focus on clear, engaging writing
-    - Avoid sensitive or inappropriate themes
-    ${isPreview ? '- This is a preview version' : ''}
-    
-    Provide only the rewritten text without any explanations or additional formatting.`;
+    const styleGuidance = {
+      narrative: 'flowing storytelling with strong narrative voice',
+      descriptive: 'rich, vivid details that paint a clear picture',
+      'dialogue-heavy': 'natural conversations that reveal character and advance the story',
+      'action-focused': 'dynamic and engaging action sequences',
+      emotional: 'deep emotional resonance and character insight',
+      minimalist: 'concise and impactful, every word carefully chosen',
+      poetic: 'lyrical and metaphorical, with artistic flair'
+    };
 
-    console.log('Sending request to Gemini...');
-    const result = await model.generateContent(prompt);
-    console.log('Received response from Gemini:', result);
-    
+    const pacingDescription = pacing < 30 ? 'measured and detailed, taking time to explore moments' :
+                             pacing > 70 ? 'swift and dynamic, maintaining forward momentum' :
+                             'balanced pacing, with natural flow';
+
+    const prompt = `As a writing assistant, enhance this text while preserving its original meaning and intent.
+
+Key requirements:
+- Tone: ${toneGuidance[tone]}
+- Style: ${styleGuidance[style]}
+- Audience: ${audience} readers
+- Pacing: ${pacingDescription}
+${keepContext ? '- Maintain narrative continuity and context from the original' : ''}
+
+Original text to enhance:
+"${text}"
+
+Guidelines:
+1. Preserve the core message and key details
+2. Enhance readability and flow
+3. Match the requested style and tone
+4. Keep similar length and structure
+5. Maintain the original context and meaning
+${isPreview ? '6. This is a preview version - focus on demonstrating the style changes' : ''}
+
+Response format: Provide only the enhanced text, without explanations or meta-text.`;
+
+    console.log('Sending enhanced request to Gemini...');
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }]}],
+      generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 1024,
+      },
+    });
+
     const response = await result.response;
-    return response.text();
+    
+    // Clean up the response text
+    let rewrittenText = response.text()
+      .replace(/^["']|["']$/g, '') // Remove quotes if present
+      .trim();
+    
+    return rewrittenText;
     
   } catch (error) {
     console.error('Detailed AI Error:', {
@@ -138,6 +197,15 @@ export const rewriteText = async (text, options = {}) => {
       throw new AIError(
         'Network or configuration error. Please check your connection.',
         'NETWORK_ERROR',
+        error
+      );
+    }
+
+    // Add specific handling for safety blocks
+    if (error.message?.includes('SAFETY')) {
+      throw new AIError(
+        'Unable to process this content. Please ensure the text is appropriate and try again.',
+        'SAFETY_ERROR',
         error
       );
     }

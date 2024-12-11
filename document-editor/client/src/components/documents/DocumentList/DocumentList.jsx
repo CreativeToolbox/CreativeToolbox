@@ -56,13 +56,20 @@ export default function DocumentList() {
 
   const handleCreateDocument = async () => {
     try {
-      const response = await createDocument({
+      const newDoc = {
         title: 'Untitled Document',
         content: ''
-      });
+      };
+      
+      const response = await createDocument(newDoc);
       if (response.data && response.data._id) {
-        setDocuments(prev => [response.data, ...prev]);
-        navigate(`/documents/${response.data._id}`);
+        // Make sure we're using the full response data which includes all document fields
+        const createdDoc = response.data;
+        setDocuments(prev => [createdDoc, ...prev]);
+        // Pass the document data through navigation state
+        navigate(`/documents/${createdDoc._id}`, { 
+          state: { document: createdDoc }
+        });
       }
     } catch (error) {
       console.error('Error creating document:', error);
@@ -70,6 +77,13 @@ export default function DocumentList() {
         setIsApiSleeping(true);
       }
     }
+  };
+
+  const handleDocumentClick = (doc) => {
+    // Pass the document data through navigation state when clicking existing documents
+    navigate(`/documents/${doc._id}`, {
+      state: { document: doc }
+    });
   };
 
   const handleDeleteConfirm = async () => {
@@ -141,7 +155,7 @@ export default function DocumentList() {
               <ListItemText 
                 primary={doc.title} 
                 secondary={new Date(doc.updatedAt).toLocaleDateString()}
-                onClick={() => navigate(`/documents/${doc._id}`)}
+                onClick={() => handleDocumentClick(doc)}
                 sx={{ cursor: 'pointer' }}
               />
               <IconButton 
