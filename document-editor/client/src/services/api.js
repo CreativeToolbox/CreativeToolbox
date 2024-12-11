@@ -59,3 +59,13 @@ export const deleteCharacter = async (characterId) => {
 export const toggleCharacterTracking = async (documentId, enabled) => {
   return axios.post(`${API_BASE_URL}/characters/document/${documentId}/tracking`, { enabled });
 };
+
+export const getStory = async (documentId) => {
+  console.log('Fetching story for document:', documentId);
+  console.log('API URL:', `${API_BASE_URL}/stories/document/${documentId}`);
+  return axios.get(`${API_BASE_URL}/stories/document/${documentId}`);
+};
+
+export const updateStoryMode = async (documentId, modeData) => {
+  return axios.put(`${API_BASE_URL}/stories/document/${documentId}/mode`, modeData);
+};

@@ -1,5 +1,5 @@
 import { AppBar, Toolbar, Typography, Container, Box, IconButton } from '@mui/material';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import PersonIcon from '@mui/icons-material/Person';
 import SearchIcon from '@mui/icons-material/Search';
 import { styled } from '@mui/material/styles';
@@ -14,6 +14,9 @@ const AnimatedIconButton = styled(IconButton)(({ theme }) => ({
 }));
 
 export default function Layout() {
+  const location = useLocation();
+  const isDocumentEditor = location.pathname.includes('/documents/');
+
   return (
     <>
       <AppBar position="static">
@@ -32,7 +35,15 @@ export default function Layout() {
           </Box>
         </Toolbar>
       </AppBar>
-      <Container sx={{ mt: 4 }}>
+      <Container 
+        maxWidth={isDocumentEditor ? false : 'lg'}
+        disableGutters={isDocumentEditor}
+        sx={{ 
+          mt: isDocumentEditor ? 0 : 4,
+          height: isDocumentEditor ? 'calc(100vh - 64px)' : 'auto',
+          overflow: isDocumentEditor ? 'hidden' : 'visible'
+        }}
+      >
         <Outlet />
       </Container>
     </>

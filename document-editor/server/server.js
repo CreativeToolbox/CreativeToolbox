@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const documentsRouter = require('./routes/documents');
 const charactersRouter = require('./routes/characters');
+const storiesRouter = require('./routes/stories');
 
 // Initialize express app
 const app = express();
@@ -45,7 +46,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
 });
 
@@ -57,6 +58,7 @@ if (process.env.NODE_ENV === 'production') {
 // Routes
 app.use('/api/documents', documentsRouter);
 app.use('/api/characters', charactersRouter);
+app.use('/api/stories', storiesRouter);
 
 // Basic route for API health check
 app.get('/api/health', (req, res) => {

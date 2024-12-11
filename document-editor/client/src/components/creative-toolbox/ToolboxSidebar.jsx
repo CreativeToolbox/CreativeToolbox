@@ -10,11 +10,17 @@ import {
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CharacterList from './CharacterList';
+import CreativeToolbox from './CreativeToolbox';
 
-export default function ToolboxSidebar({ documentId, enabled = true }) {
+export default function ToolboxSidebar({ documentId, enabled = true, onToggle }) {
   const [isOpen, setIsOpen] = useState(false);
-  const SIDEBAR_WIDTH = 340;
+  const SIDEBAR_WIDTH = '65%';
   const APPBAR_HEIGHT = 64;
+
+  const handleToggle = (newState) => {
+    setIsOpen(newState);
+    onToggle?.(newState);
+  };
 
   return (
     <Paper
@@ -26,16 +32,15 @@ export default function ToolboxSidebar({ documentId, enabled = true }) {
         width: SIDEBAR_WIDTH,
         display: 'flex',
         transition: 'transform 0.3s ease',
-        transform: isOpen ? 'translateX(0)' : `translateX(${SIDEBAR_WIDTH - 32}px)`,
+        transform: isOpen ? 'translateX(0)' : `translateX(calc(${SIDEBAR_WIDTH} - 32px))`,
         borderRadius: '8px 0 0 8px',
         overflow: 'hidden',
         zIndex: 1100,
       }}
       elevation={3}
     >
-      {/* Toggle Button */}
       <IconButton
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => handleToggle(!isOpen)}
         sx={{
           position: 'absolute',
           left: 0,
@@ -70,22 +75,7 @@ export default function ToolboxSidebar({ documentId, enabled = true }) {
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
-        {enabled ? (
-          <CharacterList documentId={documentId} />
-        ) : (
-          <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <Typography color="text.secondary" gutterBottom>
-              Character tracking is disabled
-            </Typography>
-            <Button 
-              variant="outlined" 
-              size="small"
-              onClick={() => {/* Add toggle handler */}}
-            >
-              Enable Character Tracking
-            </Button>
-          </Box>
-        )}
+        <CreativeToolbox documentId={documentId} />
       </Box>
     </Paper>
   );

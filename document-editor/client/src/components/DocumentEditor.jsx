@@ -45,6 +45,7 @@ const [showUndo, setShowUndo] = useState(false);
 
   // Add state for character tracking
   const [characterTrackingEnabled, setCharacterTrackingEnabled] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Add this to track sidebar state
 
   useEffect(() => {
     if (!location.state?.document) {
@@ -251,100 +252,130 @@ const handleUndo = () => {
   }
 };
 
+const highlightCharacterMentions = (content, characters) => {
+  let highlightedContent = content;
+  characters.forEach(char => {
+    const regex = new RegExp(`\\b${char.name}\\b`, 'g');
+    highlightedContent = highlightedContent.replace(
+      regex,
+      `<span class="character-mention" data-character-id="${char._id}">${char.name}</span>`
+    );
+  });
+  return highlightedContent;
+};
+
 return (
-  <Paper sx={{ 
-    p: 2, 
-    height: '90vh', 
-    display: 'flex', 
-    flexDirection: 'column',
-    mr: '32px', // Space for the sidebar toggle
-    position: 'relative', // Add this
-    zIndex: 1, // Add this to ensure proper stacking
+  <Box sx={{ 
+    display: 'flex',
+    height: '90vh',
+    width: '100%',
+    position: 'relative',
+    px: 0,
   }}>
-    <Stack spacing={2} sx={{ height: '100%' }}>
-      {/* Title and Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          fullWidth
-          label="Title"
-          value={currentDoc.title}
-          onChange={handleTitleChange}
-        />
-        <Button 
-          variant="contained" 
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-        <Button 
-          variant="outlined" 
-          onClick={() => navigate('/')}
-        >
-          Back
-        </Button>
-      </Box>
-      
-      {/* Editor */}
-      <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
-        <ReactQuill
-          theme="snow"
-          value={currentDoc.content}
-          onChange={handleContentChange}
-          style={{ height: 'calc(100% - 42px)' }}
-        />
-      </Box>
-    </Stack>
+    <Paper sx={{ 
+      height: '100%',
+      display: 'flex', 
+      flexDirection: 'column',
+      transition: 'width 0.3s ease, margin-right 0.3s ease',
+      width: sidebarOpen ? '30%' : '75%',
+      p: 2,
+      pl: 4,
+      borderRadius: 0,
+      ml: 3,
+      mr: sidebarOpen ? 6 : 2,
+      borderRight: '1px solid',
+      borderColor: 'divider',
+      boxShadow: 'none',
+      '& .ql-container': {
+        pl: 1,
+        pr: 1
+      }
+    }}>
+      <Stack spacing={2} sx={{ height: '100%' }}>
+        {/* Title and Buttons */}
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <TextField
+            fullWidth
+            label="Title"
+            value={currentDoc.title}
+            onChange={handleTitleChange}
+          />
+          <Button 
+            variant="contained" 
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate('/')}
+          >
+            Back
+          </Button>
+        </Box>
+        
+        {/* Editor */}
+        <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
+          <ReactQuill
+            theme="snow"
+            value={currentDoc.content}
+            onChange={handleContentChange}
+            style={{ height: 'calc(100% - 42px)' }}
+          />
+        </Box>
+      </Stack>
 
-    {/* Selection Popup */}
-    <SelectionPopup 
-      position={popupPosition}
-      selectedText={selectedText}
-      onClose={handleClosePopup}
-      onRewrite={handleRewrite}
-    />
+      {/* Selection Popup */}
+      <SelectionPopup 
+        position={popupPosition}
+        selectedText={selectedText}
+        onClose={handleClosePopup}
+        onRewrite={handleRewrite}
+      />
 
-    {/* Add ToolboxSidebar */}
+      {/* Save Status Snackbar */}
+      <Snackbar 
+        open={!!saveStatus} 
+        autoHideDuration={2000} 
+        onClose={() => setSaveStatus('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert severity={saveStatus === 'Error saving!' ? 'error' : 'success'}>
+          {saveStatus}
+        </Alert>
+      </Snackbar>
+
+      {/* Undo Snackbar */}
+      <Snackbar
+        open={showUndo}
+        autoHideDuration={10000}
+        onClose={() => setShowUndo(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        sx={{ bottom: { xs: 90, sm: 24 } }}
+      >
+        <Alert 
+          severity="info"
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={handleUndo}
+            >
+              UNDO
+            </Button>
+          }
+        >
+          Text rewritten
+        </Alert>
+      </Snackbar>
+    </Paper>
+
     <ToolboxSidebar 
       documentId={id}
       enabled={characterTrackingEnabled}
+      onToggle={(isOpen) => setSidebarOpen(isOpen)}
     />
-
-    {/* Save Status Snackbar */}
-    <Snackbar 
-      open={!!saveStatus} 
-      autoHideDuration={2000} 
-      onClose={() => setSaveStatus('')}
-      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-    >
-      <Alert severity={saveStatus === 'Error saving!' ? 'error' : 'success'}>
-        {saveStatus}
-      </Alert>
-    </Snackbar>
-
-    {/* Undo Snackbar */}
-    <Snackbar
-      open={showUndo}
-      autoHideDuration={10000}
-      onClose={() => setShowUndo(false)}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      sx={{ bottom: { xs: 90, sm: 24 } }}
-    >
-      <Alert 
-        severity="info"
-        action={
-          <Button 
-            color="inherit" 
-            size="small" 
-            onClick={handleUndo}
-          >
-            UNDO
-          </Button>
-        }
-      >
-        Text rewritten
-      </Alert>
-    </Snackbar>
-  </Paper>
+  </Box>
 );
 }
