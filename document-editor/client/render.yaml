@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: document-editor-client
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    runtime: static
+    envVars:
+      - key: VITE_API_URL
+        value: https://document-editor-api.onrender.com/api
