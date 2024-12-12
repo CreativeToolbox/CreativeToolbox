@@ -1,0 +1,59 @@
+/* Custom styles for the editor */
+.tiptap {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tiptap-toolbar {
+  background-color: white;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.editor-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.tiptap-content {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.ProseMirror {
+  outline: none;
+  height: 100%;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.ProseMirror p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ProseMirror p + p {
+  margin-top: 0.75em;
+}
+
+/* Optional: Add some spacing between toolbar buttons */
+.tiptap-toolbar button {
+  margin: 0 2px;
+}
+
+/* Optional: Add hover effect to toolbar buttons */
+.tiptap-toolbar button:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Remove any additional borders from the editor content */
+.ProseMirror-focused {
+  outline: none;
+  border: none;
+} 

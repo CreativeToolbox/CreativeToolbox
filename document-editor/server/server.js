@@ -9,6 +9,8 @@ const documentsRouter = require('./routes/documents');
 const charactersRouter = require('./routes/characters');
 const storiesRouter = require('./routes/stories');
 const plotsRouter = require('./routes/plots');
+const settingsRouter = require('./routes/settings');
+const themesRouter = require('./routes/themes');
 
 // Initialize express app
 const app = express();
@@ -61,6 +63,8 @@ app.use('/api/documents', documentsRouter);
 app.use('/api/characters', charactersRouter);
 app.use('/api/stories', storiesRouter);
 app.use('/api/plots', plotsRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/themes', themesRouter);
 
 // Basic route for API health check
 app.get('/api/health', (req, res) => {

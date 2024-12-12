@@ -34,6 +34,7 @@ import {
   TextFields,
   AutoFixHigh as AIIcon,
 } from '@mui/icons-material';
+import './Editor.css';
 
 const MenuBar = ({ editor, onAIRewrite }) => {
   if (!editor) {
@@ -200,7 +201,13 @@ const MenuBar = ({ editor, onAIRewrite }) => {
 const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        paragraph: {
+          HTMLAttributes: {
+            class: 'editor-paragraph'
+          }
+        }
+      }),
       Heading.configure({
         levels: [1, 2, 3]
       }),
@@ -231,16 +238,19 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
+    editorProps: {
+      attributes: {
+        class: 'tiptap-content'
+      }
+    }
   });
 
-  // Forward the ref
   useEffect(() => {
     if (ref && editor) {
       ref.current = editor;
     }
   }, [editor, ref]);
 
-  // Update content when value prop changes
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       editor.commands.setContent(value);
@@ -248,11 +258,24 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
   }, [value, editor]);
 
   return (
-    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
-      <MenuBar editor={editor} onAIRewrite={onAIRewrite} />
-      <Box sx={{ p: 2 }}>
-        <EditorContent editor={editor} {...props} />
-      </Box>
+    <Box sx={{ 
+      height: '100%',
+      border: '1px solid rgba(0, 0, 0, 0.23)',
+      borderRadius: 1,
+      '&:hover': {
+        borderColor: 'text.primary'
+      },
+      '&:focus-within': {
+        borderColor: 'primary.main',
+        borderWidth: 2
+      }
+    }}>
+      <div className="tiptap">
+        <MenuBar editor={editor} onAIRewrite={onAIRewrite} />
+        <div className="editor-container">
+          <EditorContent editor={editor} {...props} />
+        </div>
+      </div>
     </Box>
   );
 });

@@ -251,6 +251,7 @@ const [showUndo, setShowUndo] = useState(false);
       width: '100%',
       position: 'relative',
       px: 0,
+      overflow: 'hidden'
     }}>
       <Paper sx={{ 
         height: '100%',
@@ -258,54 +259,82 @@ const [showUndo, setShowUndo] = useState(false);
         flexDirection: 'column',
         transition: 'width 0.3s ease, margin-right 0.3s ease',
         width: sidebarOpen ? '30%' : '75%',
-        p: 2,
-        pl: 4,
+        p: 0,
         borderRadius: 0,
         ml: 3,
         mr: sidebarOpen ? 6 : 2,
         borderRight: '1px solid',
         borderColor: 'divider',
         boxShadow: 'none',
+        overflow: 'hidden',
         '& .ql-container': {
           pl: 1,
           pr: 1
         }
       }}>
-        <Stack spacing={2} sx={{ height: '100%' }}>
-          {/* Title and Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              label="Title"
-              value={currentDoc.title}
-              onChange={handleTitleChange}
-            />
-            <Button 
-              variant="contained" 
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-            <Button 
-              variant="outlined" 
-              onClick={() => navigate('/')}
-            >
-              Back
-            </Button>
-          </Box>
-          
-          {/* Editor */}
-          <Box sx={{ flexGrow: 1, '& .quill': { height: '100%' } }}>
+        <Box 
+          sx={{ 
+            p: 2,
+            pl: 4,
+            borderBottom: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1,
+            display: 'flex',
+            gap: 2,
+            alignItems: 'center'
+          }}
+        >
+          <TextField
+            fullWidth
+            label="Title"
+            value={currentDoc.title}
+            onChange={handleTitleChange}
+          />
+          <Button 
+            variant="contained" 
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={() => navigate('/')}
+          >
+            Back
+          </Button>
+        </Box>
+        
+        <Box sx={{ 
+          flexGrow: 1,
+          overflow: 'auto',
+          p: 2,
+          pl: 4,
+        }}>
+          <Box sx={{ 
+            height: '100%',
+            '& .quill': { 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              '& .ql-container': {
+                flexGrow: 1,
+                overflow: 'auto'
+              }
+            } 
+          }}>
             <Editor
               ref={editorRef}
               value={currentDoc.content}
               onChange={handleContentChange}
               onAIRewrite={handleAIRewrite}
-              style={{ height: 'calc(100% - 42px)' }}
+              style={{ height: '100%' }}
             />
           </Box>
-        </Stack>
+        </Box>
 
         {/* Selection Popup */}
         <SelectionPopup 

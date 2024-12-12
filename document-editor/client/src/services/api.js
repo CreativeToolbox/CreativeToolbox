@@ -131,3 +131,84 @@ export const updatePlotPoint = async (documentId, pointId, updates) => {
 export const deletePlotPoint = async (documentId, pointId) => {
   return api.delete(`/plots/document/${documentId}/points/${pointId}`);
 };
+
+// Add these setting-related functions
+export const getSetting = async (documentId) => {
+  return api.get(`/settings/document/${documentId}`);
+};
+
+export const updateSetting = async (documentId, settingData) => {
+  return api.put(`/settings/document/${documentId}`, settingData);
+};
+
+export const addLocation = async (documentId, locationData) => {
+  return api.post(`/settings/document/${documentId}/locations`, locationData);
+};
+
+export const updateLocation = async (documentId, locationId, updates) => {
+  return api.put(`/settings/document/${documentId}/locations/${locationId}`, updates);
+};
+
+export const deleteLocation = async (documentId, locationId) => {
+  return api.delete(`/settings/document/${documentId}/locations/${locationId}`);
+};
+
+export const addTimelinePeriod = async (documentId, periodData) => {
+  return api.post(`/settings/document/${documentId}/timeline`, periodData);
+};
+
+export const updateTimelinePeriod = async (documentId, periodId, updates) => {
+  return api.put(`/settings/document/${documentId}/timeline/${periodId}`, updates);
+};
+
+export const deleteTimelinePeriod = async (documentId, periodId) => {
+  return api.delete(`/settings/document/${documentId}/timeline/${periodId}`);
+};
+
+// Add these theme-related functions
+export const getTheme = async (documentId) => {
+  return api.get(`/themes/document/${documentId}`);
+};
+
+export const updateTheme = async (documentId, themeData) => {
+  return api.put(`/themes/document/${documentId}`, themeData);
+};
+
+// Main themes
+export const addMainTheme = async (documentId, themeData) => {
+  return api.post(`/themes/document/${documentId}/main-themes`, themeData);
+};
+
+export const updateMainTheme = async (documentId, themeId, updates) => {
+  return api.put(`/themes/document/${documentId}/main-themes/${themeId}`, updates);
+};
+
+export const deleteMainTheme = async (documentId, themeId) => {
+  return api.delete(`/themes/document/${documentId}/main-themes/${themeId}`);
+};
+
+// Motifs
+export const addMotif = async (documentId, motifData) => {
+  return api.post(`/themes/document/${documentId}/motifs`, motifData);
+};
+
+export const updateMotif = async (documentId, motifId, updates) => {
+  return api.put(`/themes/document/${documentId}/motifs/${motifId}`, updates);
+};
+
+export const deleteMotif = async (documentId, motifId) => {
+  return api.delete(`/themes/document/${documentId}/motifs/${motifId}`);
+};
+
+// Symbols
+export const addSymbol = async (documentId, symbolData) => {
+  return api.post(`/themes/document/${documentId}/symbols`, symbolData);
+};
+
+export const updateSymbol = async (documentId, symbolId, updates) => {
+  return api.put(`/themes/document/${documentId}/symbols/${symbolId}`, updates);
+};
+
+export const deleteSymbol = async (documentId, symbolId) => {
+  return api.delete(`/themes/document/${documentId}/symbols/${symbolId}`);
+};
