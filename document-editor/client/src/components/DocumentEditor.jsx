@@ -284,7 +284,18 @@ const [showUndo, setShowUndo] = useState(false);
             zIndex: 1,
             display: 'flex',
             gap: 2,
-            alignItems: 'center'
+            alignItems: 'center',
+            borderTopLeftRadius: 4,
+            borderTopRightRadius: 4,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+            '& .MuiTextField-root': {
+              bgcolor: 'background.default',
+              borderRadius: 1,
+            },
+            '& .MuiButton-root': {
+              borderRadius: 1,
+              px: 3,
+            }
           }}
         >
           <TextField
@@ -292,6 +303,7 @@ const [showUndo, setShowUndo] = useState(false);
             label="Title"
             value={currentDoc.title}
             onChange={handleTitleChange}
+            size="small"
           />
           <Button 
             variant="contained" 
