@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NODE_ENV === 'development' 
   ? 'http://localhost:5000/api'  // Local development
-  : 'https://document-editor-api.onrender.com/api'; // Production
+  : 'https://document-editor-api.onrender.com/api'; // Your Render deployment URL
 
 const api = axios.create({
   baseURL: API_BASE_URL,
