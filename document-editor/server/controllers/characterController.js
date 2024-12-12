@@ -15,9 +15,7 @@ exports.getCharacters = async (req, res) => {
 // Get a single character
 exports.getCharacter = async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id)
-      .populate('relationships.character', 'name');
-    
+    const character = await Character.findById(req.params.id);
     if (!character) {
       return res.status(404).json({ message: 'Character not found' });
     }
@@ -30,30 +28,26 @@ exports.getCharacter = async (req, res) => {
 // Create a new character
 exports.createCharacter = async (req, res) => {
   try {
-    // Validate the document exists and has character tracking enabled
-    const document = await Document.findById(req.body.document);
-    if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
-    
-    if (!document.enableCharacterTracking) {
+    // Validate required fields
+    if (!req.body.name || !req.body.document) {
       return res.status(400).json({ 
-        message: 'Character tracking is not enabled for this document' 
+        message: 'Name and document are required fields' 
       });
     }
 
-    const { isValid, errors } = Character.validateCharacter(req.body);
-    if (!isValid) {
-      return res.status(400).json({ errors });
-    }
+    const character = new Character({
+      name: req.body.name,
+      role: req.body.role || 'supporting',
+      description: req.body.description || '',
+      goals: req.body.goals || '',
+      conflicts: req.body.conflicts || '',
+      document: req.body.document
+    });
 
-    const character = new Character(req.body);
     await character.save();
     res.status(201).json(character);
   } catch (error) {
-    if (error.message.includes('already exists')) {
-      return res.status(400).json({ message: error.message });
-    }
+    console.error('Error creating character:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -62,26 +56,27 @@ exports.createCharacter = async (req, res) => {
 exports.updateCharacter = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = {
+      name: req.body.name,
+      role: req.body.role,
+      description: req.body.description,
+      goals: req.body.goals,
+      conflicts: req.body.conflicts
+    };
 
-    const character = await Character.findById(id);
+    const character = await Character.findByIdAndUpdate(
+      id,
+      updates,
+      { new: true, runValidators: true }
+    );
+
     if (!character) {
       return res.status(404).json({ message: 'Character not found' });
     }
 
-    // Prevent changing the document association
-    delete updates.document;
-
-    Object.keys(updates).forEach(key => {
-      character[key] = updates[key];
-    });
-
-    await character.save();
     res.json(character);
   } catch (error) {
-    if (error.message.includes('already exists')) {
-      return res.status(400).json({ message: error.message });
-    }
+    console.error('Error updating character:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -89,48 +84,17 @@ exports.updateCharacter = async (req, res) => {
 // Delete a character
 exports.deleteCharacter = async (req, res) => {
   try {
-    const character = await Character.findById(req.params.id);
+    const character = await Character.findByIdAndDelete(req.params.id);
     if (!character) {
       return res.status(404).json({ message: 'Character not found' });
     }
-
-    await character.remove();
     res.json({ message: 'Character deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Add a relationship between characters
-exports.addRelationship = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { targetCharacterId, relationshipType, description } = req.body;
-
-    const character = await Character.findById(id);
-    if (!character) {
-      return res.status(404).json({ message: 'Character not found' });
-    }
-
-    const targetCharacter = await Character.findById(targetCharacterId);
-    if (!targetCharacter) {
-      return res.status(404).json({ message: 'Target character not found' });
-    }
-
-    character.relationships.push({
-      character: targetCharacterId,
-      relationshipType,
-      description
-    });
-
-    await character.save();
-    res.json(character);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Add this new controller method
+// Toggle character tracking
 exports.toggleCharacterTracking = async (req, res) => {
   try {
     const { documentId } = req.params;

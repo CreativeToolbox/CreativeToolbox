@@ -17,7 +17,7 @@ router.put('/:id', characterController.updateCharacter);
 // Delete a character
 router.delete('/:id', characterController.deleteCharacter);
 
-// Add a relationship between characters
-router.post('/:id/relationships', characterController.addRelationship);
+// Toggle character tracking
+router.post('/document/:documentId/tracking', characterController.toggleCharacterTracking);
 
 module.exports = router; 

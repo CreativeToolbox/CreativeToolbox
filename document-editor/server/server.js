@@ -8,6 +8,7 @@ const connectDB = require('./config/db');
 const documentsRouter = require('./routes/documents');
 const charactersRouter = require('./routes/characters');
 const storiesRouter = require('./routes/stories');
+const plotsRouter = require('./routes/plots');
 
 // Initialize express app
 const app = express();
@@ -59,6 +60,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/documents', documentsRouter);
 app.use('/api/characters', charactersRouter);
 app.use('/api/stories', storiesRouter);
+app.use('/api/plots', plotsRouter);
 
 // Basic route for API health check
 app.get('/api/health', (req, res) => {

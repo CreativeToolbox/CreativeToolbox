@@ -34,32 +34,48 @@ export const checkApiHealth = () => api.get('/health');
 
 // Get all characters for a document
 export const getDocumentCharacters = async (documentId) => {
-  return axios.get(`${API_BASE_URL}/characters/document/${documentId}`);
+  return api.get(`/characters/document/${documentId}`);
 };
 
 // Get a single character
 export const getCharacter = async (characterId) => {
-  return axios.get(`${API_BASE_URL}/characters/${characterId}`);
+  return api.get(`/characters/${characterId}`);
 };
 
 // Create a new character
 export const createCharacter = async (characterData) => {
-  return axios.post(`${API_BASE_URL}/characters`, characterData);
+  try {
+    console.log('API: Creating character with data:', characterData);
+    const response = await api.post('/characters', characterData);
+    console.log('API: Create character response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('API: Error creating character:', error.response?.data || error.message);
+    throw error;
+  }
 };
 
 // Update a character
 export const updateCharacter = async (characterId, updates) => {
-  return axios.put(`${API_BASE_URL}/characters/${characterId}`, updates);
+  try {
+    console.log('API: Updating character:', characterId, 'with data:', updates);
+    const response = await api.put(`/characters/${characterId}`, updates);
+    console.log('API: Update character response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('API: Error updating character:', error.response?.data || error.message);
+    throw error;
+  }
 };
 
 // Delete a character
 export const deleteCharacter = async (characterId) => {
-  return axios.delete(`${API_BASE_URL}/characters/${characterId}`);
+  return api.delete(`/characters/${characterId}`);
 };
 
 // Toggle character tracking for a document
 export const toggleCharacterTracking = async (documentId, enabled) => {
-  return axios.post(`${API_BASE_URL}/characters/document/${documentId}/tracking`, { enabled });
+  return api.post(`${API_BASE_URL}/characters/document/${documentId}/tracking`, { enabled });
 };
 
 export const getStory = async (documentId) => {
@@ -70,7 +86,7 @@ export const getStory = async (documentId) => {
 
 export const updateStoryMood = async (documentId, mood) => {
   console.log('Updating story mood:', { documentId, mood });
-  return axios.put(
+  return api.put(
     `${API_BASE_URL}/stories/document/${documentId}/mood`, 
     { mood }
   );
@@ -79,8 +95,39 @@ export const updateStoryMood = async (documentId, mood) => {
 // Add this new export for story mode updates
 export const updateStoryMode = async (documentId, modeData) => {
   console.log('Updating story mode:', { documentId, modeData });
-  return axios.put(
+  return api.put(
     `${API_BASE_URL}/stories/document/${documentId}/mode`, 
     modeData
   );
+};
+
+// Add new function for character role updates
+export const updateCharacterRole = async (characterId, role) => {
+  return api.put(`/characters/${characterId}/role`, { role });
+};
+
+// Add new function for character relationships
+export const updateCharacterRelationships = async (characterId, relationships) => {
+  return api.put(`/characters/${characterId}/relationships`, { relationships });
+};
+
+// Add these new plot-related functions
+export const getPlot = async (documentId) => {
+  return api.get(`/plots/document/${documentId}`);
+};
+
+export const updatePlot = async (documentId, plotData) => {
+  return api.put(`/plots/document/${documentId}`, plotData);
+};
+
+export const addPlotPoint = async (documentId, pointData) => {
+  return api.post(`/plots/document/${documentId}/points`, pointData);
+};
+
+export const updatePlotPoint = async (documentId, pointId, updates) => {
+  return api.put(`/plots/document/${documentId}/points/${pointId}`, updates);
+};
+
+export const deletePlotPoint = async (documentId, pointId) => {
+  return api.delete(`/plots/document/${documentId}/points/${pointId}`);
 };
