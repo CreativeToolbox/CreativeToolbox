@@ -36,6 +36,8 @@ router.get('/:id', async (req, res) => {
 router.use(authMiddleware);
 
 router.post('/', async (req, res) => {
+  console.log('User from auth:', req.user);
+  console.log('Request body:', req.body);
   try {
     const validation = Document.validateDocument({
       ...req.body,

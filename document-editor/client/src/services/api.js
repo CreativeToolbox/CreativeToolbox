@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { auth } from '../firebase/config';
 
 const API_BASE_URL = 'https://document-editor-api.onrender.com/api';
 
@@ -19,6 +20,15 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+api.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // API endpoints
 // Update the getDocuments function

@@ -52,12 +52,20 @@ export default function DocumentList({ mode = 'public' }) {
 
   const handleCreateDocument = async () => {
     try {
+      console.log('Current user when creating:', currentUser); // Debug user
+      
       const newDoc = {
         title: 'Untitled Document',
-        content: ''
+        content: '',
+        userId: currentUser.uid,
+        visibility: 'private'
       };
       
+      console.log('Attempting to create document:', newDoc); // Debug payload
+      
       const response = await createDocument(newDoc);
+      console.log('Server response:', response.data); // Debug response
+      
       if (response.data && response.data._id) {
         const createdDoc = response.data;
         setDocuments(prev => [createdDoc, ...prev]);
@@ -136,7 +144,7 @@ export default function DocumentList({ mode = 'public' }) {
 
   return (
     <>
-      <Paper sx={{ p: 2 }}>
+       <Paper sx={{ p: 2 }}>
         <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h5">
             {mode === 'private' ? 'My Stories' : 'Browse Stories'}
@@ -153,58 +161,79 @@ export default function DocumentList({ mode = 'public' }) {
         </Box>
 
         <Grid container spacing={3}>
-          {documents.map((doc) => (
-            <Grid item xs={12} sm={6} md={4} key={doc._id}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {doc.title || 'Untitled'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Last modified: {new Date(doc.updatedAt).toLocaleDateString()}
-                  </Typography>
+          {documents.map((doc) => {
+            console.log('Current User:', currentUser?.uid);
+            console.log('Document:', doc);
+            
+            return (
+              <Grid item xs={12} sm={6} md={4} key={doc._id}>
+                <Card>
+                  <CardContent>
+                    <Typography 
+                      variant="h6" 
+                      gutterBottom
+                      sx={{ 
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline'
+                        }
+                      }}
+                      onClick={() => {
+                        if (currentUser?.uid === doc.userId) {
+                          handleEdit(doc);
+                        } else {
+                          handleView(doc);
+                        }
+                      }}
+                    >
+                      {doc.title || 'Untitled'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Last modified: {new Date(doc.updatedAt).toLocaleDateString()}
+                    </Typography>
 
-                  <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                    <Tooltip title="View">
-                      <IconButton onClick={() => handleView(doc)}>
-                        <VisibilityIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                      <Tooltip title="View">
+                        <IconButton onClick={() => handleView(doc)}>
+                          <VisibilityIcon />
+                        </IconButton>
+                      </Tooltip>
 
-                    {currentUser && (
-                      <>
-                        {currentUser.uid === doc.userId && (
-                          <>
-                            <Tooltip title="Edit">
-                              <IconButton onClick={() => handleEdit(doc)}>
-                                <EditIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton 
-                                onClick={() => {
-                                  setDocumentToDelete(doc);
-                                  setDeleteConfirmOpen(true);
-                                }}
-                                color="error"
-                              >
-                                <DeleteIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                        <Tooltip title="Fork">
-                          <IconButton onClick={() => handleFork(doc)}>
-                            <ForkIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    )}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+                      {currentUser && (
+                        <>
+                          {currentUser.uid === doc.userId && (
+                            <>
+                              <Tooltip title="Edit">
+                                <IconButton onClick={() => handleEdit(doc)}>
+                                  <EditIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton 
+                                  onClick={() => {
+                                    setDocumentToDelete(doc);
+                                    setDeleteConfirmOpen(true);
+                                  }}
+                                  color="error"
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          <Tooltip title="Fork">
+                            <IconButton onClick={() => handleFork(doc)}>
+                              <ForkIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
         </Grid>
       </Paper>
 
