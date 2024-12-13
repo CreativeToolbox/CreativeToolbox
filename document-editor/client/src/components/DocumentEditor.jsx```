@@ -1,5 +1,0 @@
-The error suggests that somewhere in the chain, the code is still trying to call `Character.validateCharacter()` even though we removed it from the model. This could be happening in the routes file or server setup.
-
-Could you share these files? This will help us track down where the validation function is still being referenced and ensure all the connections between frontend and backend are properly configured.
-
-Also, let's see the CharacterList component since it might be involved. 

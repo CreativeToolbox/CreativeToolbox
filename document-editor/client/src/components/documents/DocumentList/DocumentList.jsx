@@ -12,47 +12,43 @@ import {
   DialogContent,
   DialogActions,
   Box,
-  CircularProgress
+  Grid,
+  Card,
+  CardContent,
+  Tooltip
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { 
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Visibility as VisibilityIcon,
+  ContentCopy as ForkIcon
+} from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { getDocuments, createDocument, deleteDocument } from '../../../services/api';
 import { Alert, Snackbar } from '@mui/material';
+import { useAuth } from '../../../contexts/AuthContext';
 
-export default function DocumentList() {
+export default function DocumentList({ mode = 'public' }) {
   const [documents, setDocuments] = useState([]);
-  const [isApiSleeping, setIsApiSleeping] = useState(false);
   const navigate = useNavigate();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [showUndoDelete, setShowUndoDelete] = useState(false);
   const [deletedDoc, setDeletedDoc] = useState(null);
-
-  const isApiInactiveError = (error) => {
-    return (
-      error?.message?.includes('Failed to fetch') ||
-      error?.message?.includes('NetworkError') ||
-      error?.response?.status === 503 ||
-      error?.response?.status === 504
-    );
-  };
+  const { currentUser } = useAuth();
 
   const loadDocuments = async () => {
     try {
-      const response = await getDocuments();
+      const response = await getDocuments(mode);
       setDocuments(response.data);
-      setIsApiSleeping(false); // Reset if successful
     } catch (error) {
       console.error('Error loading documents:', error);
-      if (isApiInactiveError(error)) {
-        setIsApiSleeping(true);
-      }
     }
   };
 
   useEffect(() => {
     loadDocuments();
-  }, []);
+  }, [mode]);
 
   const handleCreateDocument = async () => {
     try {
@@ -63,42 +59,57 @@ export default function DocumentList() {
       
       const response = await createDocument(newDoc);
       if (response.data && response.data._id) {
-        // Make sure we're using the full response data which includes all document fields
         const createdDoc = response.data;
         setDocuments(prev => [createdDoc, ...prev]);
-        // Pass the document data through navigation state
-        navigate(`/documents/${createdDoc._id}`, { 
+        navigate(`/dashboard/documents/${createdDoc._id}/edit`, { 
           state: { document: createdDoc }
         });
       }
     } catch (error) {
       console.error('Error creating document:', error);
-      if (isApiInactiveError(error)) {
-        setIsApiSleeping(true);
-      }
     }
   };
 
-  const handleDocumentClick = (doc) => {
-    // Pass the document data through navigation state when clicking existing documents
-    navigate(`/documents/${doc._id}`, {
+  const handleView = (doc) => {
+    navigate(`/documents/${doc._id}/view`, {
       state: { document: doc }
     });
+  };
+
+  const handleEdit = (doc) => {
+    navigate(`/dashboard/documents/${doc._id}/edit`, {
+      state: { document: doc }
+    });
+  };
+
+  const handleFork = async (doc) => {
+    try {
+      const forkedDoc = {
+        title: `${doc.title} (Fork)`,
+        content: doc.content
+      };
+      
+      const response = await createDocument(forkedDoc);
+      if (response.data && response.data._id) {
+        navigate(`/dashboard/documents/${response.data._id}/edit`, {
+          state: { document: response.data }
+        });
+      }
+    } catch (error) {
+      console.error('Error forking document:', error);
+    }
   };
 
   const handleDeleteConfirm = async () => {
     if (!documentToDelete) return;
     
     try {
-      await deleteDocument(documentToDelete._id);  // Just pass the ID
+      await deleteDocument(documentToDelete._id);
       setDeletedDoc(documentToDelete);
       setDocuments(prev => prev.filter(doc => doc._id !== documentToDelete._id));
       setShowUndoDelete(true);
     } catch (error) {
       console.error('Error deleting document:', error);
-      if (isApiInactiveError(error)) {
-        setIsApiSleeping(true);
-      }
     } finally {
       setDeleteConfirmOpen(false);
       setDocumentToDelete(null);
@@ -109,118 +120,94 @@ export default function DocumentList() {
     if (!deletedDoc) return;
     
     try {
-      // First restore in the backend
       const response = await createDocument({
         _id: deletedDoc._id,
         title: deletedDoc.title,
         content: deletedDoc.content
       });
       
-      // Then update local state
       setDocuments(prev => [response.data, ...prev]);
       setDeletedDoc(null);
       setShowUndoDelete(false);
     } catch (error) {
       console.error('Error restoring document:', error);
-      if (isApiInactiveError(error)) {
-        setIsApiSleeping(true);
-      }
     }
   };
 
   return (
     <>
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          My Stories
-        </Typography>
-        <Button 
-          variant="contained" 
-          color="primary" 
-          onClick={handleCreateDocument}
-          sx={{ mb: 2 }}
-        >
-          Create New Document
-        </Button>
-        <List>
-          {documents.map((doc) => (
-            <ListItem 
-              key={doc._id}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                }
-              }}
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h5">
+            {mode === 'private' ? 'My Stories' : 'Browse Stories'}
+          </Typography>
+          {mode === 'private' && (
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleCreateDocument}
             >
-              <ListItemText 
-                primary={doc.title} 
-                secondary={new Date(doc.updatedAt).toLocaleDateString()}
-                onClick={() => handleDocumentClick(doc)}
-                sx={{ cursor: 'pointer' }}
-              />
-              <IconButton 
-                edge="end" 
-                aria-label="delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDocumentToDelete(doc);
-                  setDeleteConfirmOpen(true);
-                }}
-                color="error"
-              >
-                <DeleteIcon />
-              </IconButton>
-            </ListItem>
+              Create New Story
+            </Button>
+          )}
+        </Box>
+
+        <Grid container spacing={3}>
+          {documents.map((doc) => (
+            <Grid item xs={12} sm={6} md={4} key={doc._id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {doc.title || 'Untitled'}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Last modified: {new Date(doc.updatedAt).toLocaleDateString()}
+                  </Typography>
+
+                  <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                    <Tooltip title="View">
+                      <IconButton onClick={() => handleView(doc)}>
+                        <VisibilityIcon />
+                      </IconButton>
+                    </Tooltip>
+
+                    {currentUser && (
+                      <>
+                        {currentUser.uid === doc.userId && (
+                          <>
+                            <Tooltip title="Edit">
+                              <IconButton onClick={() => handleEdit(doc)}>
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton 
+                                onClick={() => {
+                                  setDocumentToDelete(doc);
+                                  setDeleteConfirmOpen(true);
+                                }}
+                                color="error"
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        <Tooltip title="Fork">
+                          <IconButton onClick={() => handleFork(doc)}>
+                            <ForkIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </>
+                    )}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
           ))}
-        </List>
+        </Grid>
       </Paper>
-  
-      {/* API Wake Up Dialog */}
-      <Dialog
-        open={isApiSleeping}
-        onClose={() => setIsApiSleeping(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          Waking up the server...
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center',
-            py: 2 
-          }}>
-            <CircularProgress size={40} sx={{ mb: 2 }} />
-            <Typography>
-              The server is starting up after being inactive. 
-              This may take about 30 seconds.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              The page will refresh automatically once the server is ready.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setIsApiSleeping(false)}
-            color="inherit"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={() => {
-              setIsApiSleeping(false);
-              loadDocuments(); // Retry loading documents
-            }}
-            variant="contained"
-          >
-            Retry Now
-          </Button>
-        </DialogActions>
-      </Dialog>
-  
+
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteConfirmOpen}
@@ -249,7 +236,7 @@ export default function DocumentList() {
           </Button>
         </DialogActions>
       </Dialog>
-  
+
       {/* Undo Delete Snackbar */}
       <Snackbar
         open={showUndoDelete}

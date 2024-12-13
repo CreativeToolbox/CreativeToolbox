@@ -21,7 +21,10 @@ api.interceptors.response.use(
 );
 
 // API endpoints
-export const getDocuments = () => api.get('/documents');
+// Update the getDocuments function
+export const getDocuments = (mode = 'public') => {
+  return api.get(`/documents?mode=${mode}`);
+};
 export const getDocument = (id) => api.get(`/documents/${id}`);
 export const createDocument = (data) => api.post('/documents', data);
 export const updateDocument = (id, data) => api.put(`/documents/${id}`, data);

@@ -12,6 +12,17 @@ const documentSchema = new mongoose.Schema({
     default: '',
     trim: true
   },
+  // Add user ownership
+  userId: {
+    type: String,
+    required: true
+  },
+  // Add visibility control
+  visibility: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'private'
+  },
   // Add a flag to enable/disable character tracking
   enableCharacterTracking: {
     type: Boolean,
@@ -37,6 +48,14 @@ documentSchema.statics.validateDocument = function(doc) {
     errors.push('Content must be a string');
   }
 
+  if (!doc.userId) {
+    errors.push('User ID is required');
+  }
+
+  if (doc.visibility && !['public', 'private'].includes(doc.visibility)) {
+    errors.push('Visibility must be either public or private');
+  }
+
   return {
     isValid: errors.length === 0,
     errors
@@ -54,6 +73,29 @@ documentSchema.virtual('characters', {
 documentSchema.methods.getCharacters = async function() {
   await this.populate('characters');
   return this.characters;
+};
+
+// Add method to check if user is owner
+documentSchema.methods.isOwner = function(userId) {
+  return this.userId === userId;
+};
+
+// Add method to check if document is accessible to user
+documentSchema.methods.isAccessibleBy = function(userId) {
+  return this.visibility === 'public' || this.userId === userId;
+};
+
+// Add static method to find accessible documents
+documentSchema.statics.findAccessible = function(userId, mode = 'public') {
+  if (mode === 'private') {
+    return this.find({ userId });
+  }
+  return this.find({ 
+    $or: [
+      { visibility: 'public' },
+      { userId }
+    ]
+  });
 };
 
 // Create and export the model
