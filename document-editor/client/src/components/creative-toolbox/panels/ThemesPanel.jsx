@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -42,6 +42,7 @@ import {
   updateSymbol,
   deleteSymbol
 } from '../../../services/api';
+import { debounce } from 'lodash';
 
 export default function ThemesPanel({ documentId }) {
   const [theme, setTheme] = useState(null);
@@ -73,31 +74,52 @@ export default function ThemesPanel({ documentId }) {
     significance: ''
   });
 
+  // Add debounced update function
+  const debouncedUpdateTheme = useCallback(
+    debounce(async (updates) => {
+      try {
+        await updateTheme(documentId, updates);
+        setError(null);
+      } catch (err) {
+        setError('Failed to save changes');
+        console.error(err);
+      }
+    }, 1000),
+    [documentId]
+  );
+
   useEffect(() => {
     loadTheme();
   }, [documentId]);
 
-  const loadTheme = async () => {
+  const loadTheme = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getTheme(documentId);
-      console.log('Loaded theme data:', response); // Debug log
+      console.log('Loading theme for document:', documentId);
       
-      // Set default values if data is missing
-      setTheme({
-        mainThemes: response?.mainThemes || [],
-        motifs: response?.motifs || [],
-        symbols: response?.symbols || [],
-        ...response
+      if (!response?.data) {
+        console.warn('No theme data received');
+        return;
+      }
+      
+      // Only update state if the data has actually changed
+      const newData = response.data;
+      setTheme(prev => {
+        // Compare stringified versions to check for actual changes
+        if (JSON.stringify(prev) === JSON.stringify(newData)) {
+          return prev; // No change needed
+        }
+        return newData;
       });
       setError(null);
     } catch (err) {
-      setError('Failed to load themes');
-      console.error('Error loading themes:', err);
+      console.error('Error loading theme:', err);
+      setError('Failed to load theme');
     } finally {
       setLoading(false);
     }
-  };
+  }, [documentId]);
 
   // Main theme handlers
   const handleOpenMainThemeDialog = (mainTheme = null) => {
@@ -119,15 +141,36 @@ export default function ThemesPanel({ documentId }) {
     setMainThemeDialogOpen(true);
   };
 
+  // Update the handlers to use debouncing for main theme form
+  const handleMainThemeFormChange = (field, value) => {
+    setMainThemeForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (editingMainTheme) {
+      debouncedUpdateTheme({
+        mainThemes: theme.mainThemes.map(t =>
+          t._id === editingMainTheme._id
+            ? { ...t, [field]: value }
+            : t
+        )
+      });
+    }
+  };
+
   const handleSubmitMainTheme = async () => {
     try {
+      let updatedTheme;
       if (editingMainTheme) {
-        await updateMainTheme(documentId, editingMainTheme._id, mainThemeForm);
+        const response = await updateMainTheme(documentId, editingMainTheme._id, mainThemeForm);
+        updatedTheme = response.data;
       } else {
-        await addMainTheme(documentId, mainThemeForm);
+        const response = await addMainTheme(documentId, mainThemeForm);
+        updatedTheme = response.data;
       }
       setMainThemeDialogOpen(false);
-      loadTheme();
+      // Update local state directly instead of reloading
+      setTheme(updatedTheme);
     } catch (err) {
       setError('Failed to save main theme');
     }
@@ -136,8 +179,9 @@ export default function ThemesPanel({ documentId }) {
   const handleDeleteMainTheme = async (themeId) => {
     if (window.confirm('Are you sure you want to delete this theme?')) {
       try {
-        await deleteMainTheme(documentId, themeId);
-        loadTheme();
+        const response = await deleteMainTheme(documentId, themeId);
+        // Update local state directly instead of reloading
+        setTheme(response.data);
       } catch (err) {
         setError('Failed to delete theme');
       }
@@ -164,15 +208,36 @@ export default function ThemesPanel({ documentId }) {
     setMotifDialogOpen(true);
   };
 
+  // Update motif form handler
+  const handleMotifFormChange = (field, value) => {
+    setMotifForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (editingMotif) {
+      debouncedUpdateTheme({
+        motifs: theme.motifs.map(m =>
+          m._id === editingMotif._id
+            ? { ...m, [field]: value }
+            : m
+        )
+      });
+    }
+  };
+
   const handleSubmitMotif = async () => {
     try {
+      let updatedTheme;
       if (editingMotif) {
-        await updateMotif(documentId, editingMotif._id, motifForm);
+        const response = await updateMotif(documentId, editingMotif._id, motifForm);
+        updatedTheme = response.data;
       } else {
-        await addMotif(documentId, motifForm);
+        const response = await addMotif(documentId, motifForm);
+        updatedTheme = response.data;
       }
       setMotifDialogOpen(false);
-      loadTheme();
+      // Update local state directly instead of reloading
+      setTheme(updatedTheme);
     } catch (err) {
       setError('Failed to save motif');
     }
@@ -181,8 +246,9 @@ export default function ThemesPanel({ documentId }) {
   const handleDeleteMotif = async (motifId) => {
     if (window.confirm('Are you sure you want to delete this motif?')) {
       try {
-        await deleteMotif(documentId, motifId);
-        loadTheme();
+        const response = await deleteMotif(documentId, motifId);
+        // Update local state directly instead of reloading
+        setTheme(response.data);
       } catch (err) {
         setError('Failed to delete motif');
       }
@@ -209,6 +275,23 @@ export default function ThemesPanel({ documentId }) {
     setSymbolDialogOpen(true);
   };
 
+  // Update symbol form handler
+  const handleSymbolFormChange = (field, value) => {
+    setSymbolForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (editingSymbol) {
+      debouncedUpdateTheme({
+        symbols: theme.symbols.map(s =>
+          s._id === editingSymbol._id
+            ? { ...s, [field]: value }
+            : s
+        )
+      });
+    }
+  };
+
   const handleAddOccurrence = () => {
     if (occurrenceForm.context.trim() || occurrenceForm.significance.trim()) {
       setSymbolForm({
@@ -227,13 +310,17 @@ export default function ThemesPanel({ documentId }) {
 
   const handleSubmitSymbol = async () => {
     try {
+      let updatedTheme;
       if (editingSymbol) {
-        await updateSymbol(documentId, editingSymbol._id, symbolForm);
+        const response = await updateSymbol(documentId, editingSymbol._id, symbolForm);
+        updatedTheme = response.data;
       } else {
-        await addSymbol(documentId, symbolForm);
+        const response = await addSymbol(documentId, symbolForm);
+        updatedTheme = response.data;
       }
       setSymbolDialogOpen(false);
-      loadTheme();
+      // Update local state directly instead of reloading
+      setTheme(updatedTheme);
     } catch (err) {
       setError('Failed to save symbol');
     }
@@ -242,13 +329,23 @@ export default function ThemesPanel({ documentId }) {
   const handleDeleteSymbol = async (symbolId) => {
     if (window.confirm('Are you sure you want to delete this symbol?')) {
       try {
-        await deleteSymbol(documentId, symbolId);
-        loadTheme();
+        const response = await deleteSymbol(documentId, symbolId);
+        // Update local state directly instead of reloading
+        setTheme(response.data);
       } catch (err) {
         setError('Failed to delete symbol');
       }
     }
   };
+
+  // Add cleanup for debounced updates
+  useEffect(() => {
+    return () => {
+      if (debouncedUpdateTheme) {
+        debouncedUpdateTheme.cancel();
+      }
+    };
+  }, [debouncedUpdateTheme]);
 
   if (loading) {
     return (
@@ -271,7 +368,7 @@ export default function ThemesPanel({ documentId }) {
         <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-              <Typography variant="h6">Main Themes</Typography>
+              <Typography variant="h6" component="div">Main Themes</Typography>
               <Button
                 startIcon={<AddIcon />}
                 onClick={(e) => {
@@ -301,14 +398,16 @@ export default function ThemesPanel({ documentId }) {
                   <ListItemText
                     primary={mainTheme.name}
                     secondary={
-                      <Stack spacing={1}>
-                        <Typography variant="body2">
+                      <>
+                        <Typography variant="body2" component="span">
                           {mainTheme.description}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Exploration: {mainTheme.exploration}
-                        </Typography>
-                      </Stack>
+                        {mainTheme.exploration && (
+                          <Typography variant="body2" component="span" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            Exploration: {mainTheme.exploration}
+                          </Typography>
+                        )}
+                      </>
                     }
                   />
                   <ListItemSecondaryAction>
@@ -329,7 +428,7 @@ export default function ThemesPanel({ documentId }) {
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-              <Typography variant="h6">Motifs</Typography>
+              <Typography variant="h6" component="div">Motifs</Typography>
               <Button
                 startIcon={<AddIcon />}
                 onClick={(e) => {
@@ -359,14 +458,16 @@ export default function ThemesPanel({ documentId }) {
                   <ListItemText
                     primary={motif.name}
                     secondary={
-                      <Stack spacing={1}>
-                        <Typography variant="body2">
+                      <>
+                        <Typography variant="body2" component="span">
                           {motif.description}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Purpose: {motif.purpose}
-                        </Typography>
-                      </Stack>
+                        {motif.purpose && (
+                          <Typography variant="body2" component="span" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                            Purpose: {motif.purpose}
+                          </Typography>
+                        )}
+                      </>
                     }
                   />
                   <ListItemSecondaryAction>
@@ -387,7 +488,7 @@ export default function ThemesPanel({ documentId }) {
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
-              <Typography variant="h6">Symbols</Typography>
+              <Typography variant="h6" component="div">Symbols</Typography>
               <Button
                 startIcon={<AddIcon />}
                 onClick={(e) => {
@@ -416,28 +517,30 @@ export default function ThemesPanel({ documentId }) {
                 >
                   <ListItemText
                     primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
                         <TagIcon color="primary" />
-                        {symbol.name}
-                      </Box>
+                        <Typography variant="subtitle1" component="span">
+                          {symbol.name}
+                        </Typography>
+                      </Stack>
                     }
                     secondary={
-                      <Stack spacing={1}>
-                        <Typography variant="body2">
+                      <>
+                        <Typography variant="body2" component="span">
                           Meaning: {symbol.meaning}
                         </Typography>
                         {symbol.occurrences?.length > 0 && (
-                          <Box>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2" component="span" color="text.secondary">
                               Occurrences:
                             </Typography>
-                            <Stack spacing={1} sx={{ pl: 2 }}>
+                            <Stack spacing={1} sx={{ pl: 2, mt: 1 }}>
                               {symbol.occurrences.map((occurrence, index) => (
                                 <Box key={index}>
-                                  <Typography variant="body2">
+                                  <Typography variant="body2" component="span">
                                     Context: {occurrence.context}
                                   </Typography>
-                                  <Typography variant="body2" color="text.secondary">
+                                  <Typography variant="body2" component="span" color="text.secondary" sx={{ display: 'block' }}>
                                     Significance: {occurrence.significance}
                                   </Typography>
                                 </Box>
@@ -445,7 +548,7 @@ export default function ThemesPanel({ documentId }) {
                             </Stack>
                           </Box>
                         )}
-                      </Stack>
+                      </>
                     }
                   />
                   <ListItemSecondaryAction>
@@ -473,14 +576,14 @@ export default function ThemesPanel({ documentId }) {
             <TextField
               label="Name"
               value={mainThemeForm.name}
-              onChange={(e) => setMainThemeForm({ ...mainThemeForm, name: e.target.value })}
+              onChange={(e) => handleMainThemeFormChange('name', e.target.value)}
               fullWidth
               required
             />
             <TextField
               label="Description"
               value={mainThemeForm.description}
-              onChange={(e) => setMainThemeForm({ ...mainThemeForm, description: e.target.value })}
+              onChange={(e) => handleMainThemeFormChange('description', e.target.value)}
               multiline
               rows={3}
               fullWidth
@@ -488,7 +591,7 @@ export default function ThemesPanel({ documentId }) {
             <TextField
               label="Exploration"
               value={mainThemeForm.exploration}
-              onChange={(e) => setMainThemeForm({ ...mainThemeForm, exploration: e.target.value })}
+              onChange={(e) => handleMainThemeFormChange('exploration', e.target.value)}
               multiline
               rows={3}
               fullWidth
@@ -518,14 +621,14 @@ export default function ThemesPanel({ documentId }) {
             <TextField
               label="Name"
               value={motifForm.name}
-              onChange={(e) => setMotifForm({ ...motifForm, name: e.target.value })}
+              onChange={(e) => handleMotifFormChange('name', e.target.value)}
               fullWidth
               required
             />
             <TextField
               label="Description"
               value={motifForm.description}
-              onChange={(e) => setMotifForm({ ...motifForm, description: e.target.value })}
+              onChange={(e) => handleMotifFormChange('description', e.target.value)}
               multiline
               rows={3}
               fullWidth
@@ -533,7 +636,7 @@ export default function ThemesPanel({ documentId }) {
             <TextField
               label="Purpose"
               value={motifForm.purpose}
-              onChange={(e) => setMotifForm({ ...motifForm, purpose: e.target.value })}
+              onChange={(e) => handleMotifFormChange('purpose', e.target.value)}
               multiline
               rows={2}
               fullWidth
@@ -563,14 +666,14 @@ export default function ThemesPanel({ documentId }) {
             <TextField
               label="Name"
               value={symbolForm.name}
-              onChange={(e) => setSymbolForm({ ...symbolForm, name: e.target.value })}
+              onChange={(e) => handleSymbolFormChange('name', e.target.value)}
               fullWidth
               required
             />
             <TextField
               label="Meaning"
               value={symbolForm.meaning}
-              onChange={(e) => setSymbolForm({ ...symbolForm, meaning: e.target.value })}
+              onChange={(e) => handleSymbolFormChange('meaning', e.target.value)}
               multiline
               rows={2}
               fullWidth

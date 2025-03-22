@@ -5,35 +5,78 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
-const documentsRouter = require('./routes/documents');
-const charactersRouter = require('./routes/characters');
-const storiesRouter = require('./routes/stories');
-const plotsRouter = require('./routes/plots');
-const settingsRouter = require('./routes/settings');
-const themesRouter = require('./routes/themes');
+
+// Add at the very top, after the requires
+console.log('\n=== Starting Server ===');
+console.log('Current directory:', process.cwd());
+console.log('Looking for routes in:', require('path').resolve('./routes'));
 
 // Initialize express app
 const app = express();
 
+// Load all routers with error handling
+console.log('\nLoading Routers...');
+let documentsRouter, charactersRouter, storiesRouter, plotsRouter, settingsRouter, themesRouter;
+
+try {
+  documentsRouter = require('./routes/documents');
+  console.log('✅ Documents router loaded');
+} catch (error) {
+  console.error('❌ Error loading documents router:', error.message);
+}
+
+try {
+  charactersRouter = require('./routes/characters');
+  console.log('✅ Characters router loaded');
+} catch (error) {
+  console.error('❌ Error loading characters router:', error.message);
+}
+
+try {
+  storiesRouter = require('./routes/stories');
+  console.log('✅ Stories router loaded');
+} catch (error) {
+  console.error('❌ Error loading stories router:', error.message);
+}
+
+try {
+  plotsRouter = require('./routes/plots');
+  console.log('✅ Plots router loaded');
+} catch (error) {
+  console.error('❌ Error loading plots router:', error.message);
+  console.error('Error details:', error);
+}
+
+try {
+  settingsRouter = require('./routes/settings');
+  console.log('✅ Settings router loaded');
+} catch (error) {
+  console.error('❌ Error loading settings router:', error.message);
+  console.error('Error details:', error);
+}
+
+try {
+  themesRouter = require('./routes/themes');
+  console.log('✅ Themes router loaded');
+} catch (error) {
+  console.error('❌ Error loading themes router:', error.message);
+  console.error('Error details:', error);
+}
+
 // Connect to MongoDB
 connectDB();
 
-// Security middleware
+// Middleware setup...
 if (process.env.NODE_ENV === 'production') {
-  app.use(helmet()); // Adds various HTTP headers for security
-  
-  // Rate limiting
+  app.use(helmet());
   app.use(rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests from this IP, please try again later.'
   }));
 }
 
-// Compression middleware
-app.use(compression()); // Compress all responses
-
-// CORS middleware
+app.use(compression());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.CORS_ORIGIN 
@@ -43,11 +86,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Body parser middleware
-app.use(express.json({ limit: '10mb' })); // Limit JSON body size
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request logging middleware
+// Request logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
   next();
@@ -58,13 +100,54 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-// Routes
-app.use('/api/documents', documentsRouter);
-app.use('/api/characters', charactersRouter);
-app.use('/api/stories', storiesRouter);
-app.use('/api/plots', plotsRouter);
-app.use('/api/settings', settingsRouter);
-app.use('/api/themes', themesRouter);
+// Mount routers
+console.log('\nMounting Routers...');
+if (documentsRouter) {
+  app.use('/api/documents', documentsRouter);
+  console.log('✅ Documents routes mounted at /api/documents');
+}
+if (charactersRouter) {
+  app.use('/api/characters', charactersRouter);
+  console.log('✅ Characters routes mounted at /api/characters');
+}
+if (storiesRouter) {
+  app.use('/api/stories', storiesRouter);
+  console.log('✅ Stories routes mounted at /api/stories');
+}
+if (plotsRouter) {
+  app.use('/api/plots', plotsRouter);
+  console.log('✅ Plot routes mounted at /api/plots');
+}
+if (settingsRouter) {
+  app.use('/api/settings', settingsRouter);
+  console.log('✅ Settings routes mounted at /api/settings');
+}
+if (themesRouter) {
+  app.use('/api/themes', themesRouter);
+  console.log('✅ Theme routes mounted at /api/themes');
+}
+
+// Debug routes endpoint
+app.get('/api/routes', (req, res) => {
+  const routes = {
+    documents: documentsRouter?.stack.map(r => r.route?.path).filter(Boolean),
+    characters: charactersRouter?.stack.map(r => r.route?.path).filter(Boolean),
+    stories: storiesRouter?.stack.map(r => r.route?.path).filter(Boolean),
+    plots: plotsRouter?.stack.map(r => r.route?.path).filter(Boolean),
+    settings: settingsRouter?.stack.map(r => r.route?.path).filter(Boolean),
+    themes: themesRouter?.stack.map(r => r.route?.path).filter(Boolean)
+  };
+  res.json(routes);
+});
+
+// Add this right after mounting all routes, before the health check
+console.log('\nRegistered Routes:');
+console.log('Documents:', documentsRouter?.stack.map(r => r.route?.path).filter(Boolean));
+console.log('Characters:', charactersRouter?.stack.map(r => r.route?.path).filter(Boolean));
+console.log('Stories:', storiesRouter?.stack.map(r => r.route?.path).filter(Boolean));
+console.log('Plots:', plotsRouter?.stack.map(r => r.route?.path).filter(Boolean));
+console.log('Settings:', settingsRouter?.stack.map(r => r.route?.path).filter(Boolean));
+console.log('Themes:', themesRouter?.stack.map(r => r.route?.path).filter(Boolean));
 
 // Basic route for API health check
 app.get('/api/health', (req, res) => {
@@ -74,6 +157,29 @@ app.get('/api/health', (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Add this before the 404 handler
+app.get('/api/debug/routes', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) {
+      routes.push({
+        path: middleware.route.path,
+        methods: Object.keys(middleware.route.methods)
+      });
+    } else if (middleware.name === 'router') {
+      middleware.handle.stack.forEach(handler => {
+        if (handler.route) {
+          routes.push({
+            path: handler.route.path,
+            methods: Object.keys(handler.route.methods)
+          });
+        }
+      });
+    }
+  });
+  res.json(routes);
 });
 
 // 404 handler
@@ -143,3 +249,12 @@ process.on('uncaughtException', (err) => {
     server.close(() => process.exit(1));
   }
 });
+
+// Add after other requires
+console.log('\nLoaded Routers:');
+console.log('Documents Router:', !!documentsRouter);
+console.log('Characters Router:', !!charactersRouter);
+console.log('Stories Router:', !!storiesRouter);
+console.log('Plots Router:', !!plotsRouter);
+console.log('Settings Router:', !!settingsRouter);
+console.log('Themes Router:', !!themesRouter);

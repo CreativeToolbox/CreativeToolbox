@@ -1,7 +1,6 @@
 import { forwardRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Heading from '@tiptap/extension-heading';
 import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -35,6 +34,25 @@ import {
   AutoFixHigh as AIIcon,
 } from '@mui/icons-material';
 import './Editor.css';
+
+const rgbToHex = (rgb) => {
+  // Handle if it's already hex
+  if (rgb?.startsWith('#')) {
+    return rgb;
+  }
+  
+  // Handle rgb/rgba format
+  const rgbMatch = rgb?.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1]).toString(16).padStart(2, '0');
+    const g = parseInt(rgbMatch[2]).toString(16).padStart(2, '0');
+    const b = parseInt(rgbMatch[3]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+  
+  // Default fallback
+  return '#000000';
+};
 
 const MenuBar = ({ editor, onAIRewrite }) => {
   if (!editor) {
@@ -179,7 +197,7 @@ const MenuBar = ({ editor, onAIRewrite }) => {
       <input
         type="color"
         onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
-        value={editor.getAttributes('textStyle').color || '#000000'}
+        value={rgbToHex(editor.getAttributes('textStyle').color)}
         style={{ height: '30px', width: '40px', padding: '0', alignSelf: 'center' }}
       />
 
@@ -202,14 +220,14 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3]
+        },
         paragraph: {
           HTMLAttributes: {
             class: 'editor-paragraph'
           }
         }
-      }),
-      Heading.configure({
-        levels: [1, 2, 3]
       }),
       TextAlign.configure({
         types: ['heading', 'paragraph'],

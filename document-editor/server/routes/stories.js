@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const storyController = require('../controllers/storyController');
-const authMiddleware = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 // Add debug logging
 router.use((req, res, next) => {
@@ -14,14 +14,9 @@ router.use((req, res, next) => {
   next();
 });
 
-// Apply auth middleware to all routes
-router.use(authMiddleware);
-
-// Get story for a document
-router.get('/document/:documentId', storyController.getStory);
-
-// Update story mode and mood
-router.put('/document/:documentId/mode', storyController.updateMode);
-router.put('/document/:documentId/mood', storyController.updateMood);
+// Story routes - apply auth middleware to specific routes
+router.get('/document/:documentId', authenticateToken, storyController.getStory);
+router.put('/document/:documentId/mode', authenticateToken, storyController.updateMode);
+router.put('/document/:documentId/mood', authenticateToken, storyController.updateMood);
 
 module.exports = router; 

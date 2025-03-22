@@ -1,23 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const characterController = require('../controllers/characterController');
+const { authenticateToken } = require('../middleware/auth');
 
-// Get all characters for a document
-router.get('/document/:documentId', characterController.getCharacters);
+// Add debug logging
+router.use((req, res, next) => {
+  console.log('Characters Route:', {
+    method: req.method,
+    path: req.path,
+    params: req.params,
+    body: req.body
+  });
+  next();
+});
 
-// Get a single character
-router.get('/:id', characterController.getCharacter);
-
-// Create a new character
-router.post('/', characterController.createCharacter);
-
-// Update a character
-router.put('/:id', characterController.updateCharacter);
-
-// Delete a character
-router.delete('/:id', characterController.deleteCharacter);
+// Character routes with individual auth middleware
+router.get('/document/:documentId', authenticateToken, characterController.getCharacters);
+router.get('/:id', authenticateToken, characterController.getCharacter);
+router.post('/', authenticateToken, characterController.createCharacter);
+router.put('/:id', authenticateToken, characterController.updateCharacter);
+router.delete('/:id', authenticateToken, characterController.deleteCharacter);
 
 // Toggle character tracking
-router.post('/document/:documentId/tracking', characterController.toggleCharacterTracking);
+router.post('/document/:documentId/tracking', authenticateToken, characterController.toggleCharacterTracking);
 
 module.exports = router; 

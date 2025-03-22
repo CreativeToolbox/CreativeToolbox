@@ -4,17 +4,28 @@ const Story = require('../models/Story');
 exports.createDocument = async (req, res) => {
   try {
     const document = new Document({
-      ...req.body,
+      title: req.body.title || 'Untitled Story',
+      content: req.body.content || '',
       userId: req.user.uid,
-      visibility: req.body.visibility || 'private'
+      visibility: req.body.visibility || 'private',
+      theme: req.body.theme || {
+        mainThemes: [],
+        motifs: [],
+        symbols: []
+      }
     });
+
+    const savedDocument = await document.save();
     
-    await document.save();
-    await Story.createForDocument(document._id);
+    await Story.createForDocument(savedDocument._id);
     
-    res.status(201).json(document);
+    res.status(201).json(savedDocument);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Error creating document:', error);
+    res.status(500).json({ 
+      message: 'Error creating document', 
+      error: error.message 
+    });
   }
 };
 
@@ -90,5 +101,32 @@ exports.deleteDocument = async (req, res) => {
     res.json({ message: 'Document deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.forkDocument = async (req, res) => {
+  try {
+    const originalDoc = await Document.findById(req.params.id);
+    if (!originalDoc) {
+      return res.status(404).json({ message: 'Original document not found' });
+    }
+
+    const document = new Document({
+      title: `${originalDoc.title} (Fork)`,
+      content: originalDoc.content,
+      userId: req.body.userId,
+      visibility: 'private',
+      theme: originalDoc.theme || {
+        mainThemes: [],
+        motifs: [],
+        symbols: []
+      }
+    });
+
+    const savedDocument = await document.save();
+    res.status(201).json(savedDocument);
+  } catch (error) {
+    console.error('Error forking document:', error);
+    res.status(500).json({ message: 'Error forking document', error: error.message });
   }
 };

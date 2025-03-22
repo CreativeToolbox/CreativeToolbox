@@ -1,14 +1,24 @@
 const Plot = require('../models/Plot');
+const mongoose = require('mongoose');
 
 exports.getPlot = async (req, res) => {
   try {
     const documentId = req.params.documentId;
-    let plot = await Plot.findOne({ document: documentId });
+    console.log('Getting plot for document:', documentId);
+
+    // Convert string ID to ObjectId if needed
+    const objectId = mongoose.Types.ObjectId.isValid(documentId) 
+      ? new mongoose.Types.ObjectId(documentId)
+      : documentId;
+
+    let plot = await Plot.findOne({ document: objectId })
+      .populate('mainConflictCharacters')
+      .populate('plotPoints.involvedCharacters');
     
-    // Create default plot if none exists
+    // If no plot exists, create a default one
     if (!plot) {
       plot = await Plot.create({
-        document: documentId,
+        document: objectId,
         structure: 'three_act',
         mainConflict: '',
         synopsis: '',
@@ -17,6 +27,7 @@ exports.getPlot = async (req, res) => {
       });
     }
 
+    // Ensure we're sending a properly formatted response
     const response = {
       _id: plot._id,
       document: plot.document,
@@ -28,7 +39,7 @@ exports.getPlot = async (req, res) => {
       createdAt: plot.createdAt,
       updatedAt: plot.updatedAt
     };
-
+    
     console.log('Returning plot:', response);
     res.json(response);
   } catch (error) {

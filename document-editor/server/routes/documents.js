@@ -1,16 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const documentsController = require('../controllers/documentsController');
-const authMiddleware = require('../middleware/auth');
+const documentController = require('../controllers/documentController');
+const { authenticateToken } = require('../middleware/auth');
 
-// Apply auth middleware to all routes
-router.use(authMiddleware);
-
-// Document routes
-router.get('/', documentsController.getDocuments);
-router.get('/:id', documentsController.getDocument);
-router.post('/', documentsController.createDocument);
-router.put('/:id', documentsController.updateDocument);
-router.delete('/:id', documentsController.deleteDocument);
+// Document routes - apply auth middleware to specific routes that need it
+router.get('/', authenticateToken, documentController.getDocuments);
+router.get('/:id', authenticateToken, documentController.getDocument);
+router.post('/', authenticateToken, documentController.createDocument);
+router.put('/:id', authenticateToken, documentController.updateDocument);
+router.delete('/:id', authenticateToken, documentController.deleteDocument);
+router.post('/:id/fork', authenticateToken, documentController.forkDocument);
 
 module.exports = router;

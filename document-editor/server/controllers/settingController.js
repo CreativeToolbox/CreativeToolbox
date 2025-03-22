@@ -1,19 +1,32 @@
 const Setting = require('../models/Setting');
+const mongoose = require('mongoose');
 
 exports.getSetting = async (req, res) => {
   try {
-    const { documentId } = req.params;
-    let setting = await Setting.findOne({ document: documentId });
+    const documentId = req.params.documentId;
+    console.log('Getting setting for document:', documentId);
+
+    const objectId = mongoose.Types.ObjectId.isValid(documentId) 
+      ? new mongoose.Types.ObjectId(documentId)
+      : documentId;
+
+    let setting = await Setting.findOne({ document: objectId });
+    console.log('Found setting:', setting);
     
+    // If no setting exists, create a default one
     if (!setting) {
-      // Create default setting if none exists
+      console.log('No setting found, creating default');
       setting = await Setting.create({
-        document: documentId,
+        document: objectId,
+        mainLocation: '',
+        timePeriod: '',
+        worldDetails: '',
         locations: [],
         timeline: []
       });
+      console.log('Created default setting:', setting);
     }
-    
+
     res.json(setting);
   } catch (error) {
     console.error('Error in getSetting:', error);
@@ -25,12 +38,32 @@ exports.updateSetting = async (req, res) => {
   try {
     const { documentId } = req.params;
     const updates = req.body;
+    console.log('Updating setting for document:', documentId);
+    console.log('Received updates:', updates);
 
-    const setting = await Setting.findOneAndUpdate(
-      { document: documentId },
-      updates,
-      { new: true, upsert: true, runValidators: true }
-    );
+    // First, find the existing setting or create a default one
+    let setting = await Setting.findOne({ document: documentId });
+    if (!setting) {
+      setting = new Setting({
+        document: documentId,
+        mainLocation: '',
+        timePeriod: '',
+        worldDetails: '',
+        locations: [],
+        timeline: []
+      });
+    }
+
+    // Update only the fields that are present in the updates object
+    if (updates.mainLocation !== undefined) setting.mainLocation = updates.mainLocation;
+    if (updates.timePeriod !== undefined) setting.timePeriod = updates.timePeriod;
+    if (updates.worldDetails !== undefined) setting.worldDetails = updates.worldDetails;
+    if (updates.locations !== undefined) setting.locations = updates.locations;
+    if (updates.timeline !== undefined) setting.timeline = updates.timeline;
+
+    // Save the updated document
+    await setting.save();
+    console.log('Saved setting:', setting);
 
     res.json(setting);
   } catch (error) {
@@ -105,7 +138,7 @@ exports.deleteLocation = async (req, res) => {
   }
 };
 
-// Timeline management
+// Timeline period handlers
 exports.addTimelinePeriod = async (req, res) => {
   try {
     const { documentId } = req.params;

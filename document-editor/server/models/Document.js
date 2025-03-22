@@ -1,11 +1,33 @@
 const mongoose = require('mongoose');
 
+const themeSchema = new mongoose.Schema({
+  mainThemes: [{
+    name: String,
+    description: String,
+    exploration: String
+  }],
+  motifs: [{
+    name: String,
+    description: String,
+    purpose: String
+  }],
+  symbols: [{
+    name: String,
+    meaning: String,
+    occurrences: [{
+      context: String,
+      significance: String
+    }]
+  }]
+});
+
 // Define the schema
 const documentSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Title is required'],
-    trim: true
+    trim: true,
+    default: 'Untitled Story'
   },
   content: {
     type: String,
@@ -27,6 +49,14 @@ const documentSchema = new mongoose.Schema({
   enableCharacterTracking: {
     type: Boolean,
     default: true
+  },
+  theme: {
+    type: themeSchema,
+    default: {
+      mainThemes: [],
+      motifs: [],
+      symbols: []
+    }
   }
 }, {
   timestamps: true,

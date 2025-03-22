@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -39,6 +39,7 @@ import {
 } from '../../../services/api';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import CharacterReference from '../../../components/CharacterReference';
+import { debounce } from 'lodash';
 
 const PLOT_STRUCTURES = {
   three_act: 'Three Act Structure',
@@ -150,31 +151,41 @@ export default function PlotPanel({ documentId }) {
     }
   };
 
-  const handleStructureChange = async (structure) => {
-    try {
-      await updatePlot(documentId, { structure });
-      loadPlot();
-    } catch (err) {
-      setError('Failed to update plot structure');
-    }
+  const debouncedUpdatePlot = useCallback(
+    debounce(async (updates) => {
+      try {
+        await updatePlot(documentId, updates);
+        setError(null);
+      } catch (err) {
+        setError('Failed to save changes');
+        console.error(err);
+      }
+    }, 1000),
+    [documentId]
+  );
+
+  const handleStructureChange = (value) => {
+    setPlot(prev => ({
+      ...prev,
+      structure: value
+    }));
+    debouncedUpdatePlot({ structure: value });
   };
 
-  const handleMainConflictChange = async (mainConflict) => {
-    try {
-      await updatePlot(documentId, { mainConflict });
-      setPlot({ ...plot, mainConflict });
-    } catch (err) {
-      setError('Failed to update main conflict');
-    }
+  const handleMainConflictChange = (value) => {
+    setPlot(prev => ({
+      ...prev,
+      mainConflict: value
+    }));
+    debouncedUpdatePlot({ mainConflict: value });
   };
 
-  const handleSynopsisChange = async (synopsis) => {
-    try {
-      await updatePlot(documentId, { synopsis });
-      setPlot({ ...plot, synopsis });
-    } catch (err) {
-      setError('Failed to update synopsis');
-    }
+  const handleSynopsisChange = (value) => {
+    setPlot(prev => ({
+      ...prev,
+      synopsis: value
+    }));
+    debouncedUpdatePlot({ synopsis: value });
   };
 
   const handleOpenDialog = (point = null) => {
@@ -274,16 +285,14 @@ export default function PlotPanel({ documentId }) {
     }
   };
 
-  const handleMainConflictCharactersChange = async (characters) => {
-    try {
-      await updatePlot(documentId, { mainConflictCharacters: characters.map(c => c._id) });
-      setPlot({
-        ...plot,
-        mainConflictCharacters: characters
-      });
-    } catch (err) {
-      setError('Failed to update main conflict characters');
-    }
+  const handleMainConflictCharactersChange = (characters) => {
+    setPlot(prev => ({
+      ...prev,
+      mainConflictCharacters: characters
+    }));
+    debouncedUpdatePlot({ 
+      mainConflictCharacters: characters.map(c => c._id) 
+    });
   };
 
   if (loading) {

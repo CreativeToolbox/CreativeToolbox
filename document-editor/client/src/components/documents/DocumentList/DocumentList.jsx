@@ -52,29 +52,27 @@ export default function DocumentList({ mode = 'public' }) {
 
   const handleCreateDocument = async () => {
     try {
-      console.log('Current user when creating:', currentUser); // Debug user
-      
       const newDoc = {
-        title: 'Untitled Document',
+        title: 'Untitled Story',
         content: '',
         userId: currentUser.uid,
-        visibility: 'private'
+        visibility: 'private',
+        theme: {
+          mainThemes: [],
+          motifs: [],
+          symbols: []
+        }
       };
       
-      console.log('Attempting to create document:', newDoc); // Debug payload
-      
       const response = await createDocument(newDoc);
-      console.log('Server response:', response.data); // Debug response
       
       if (response.data && response.data._id) {
-        const createdDoc = response.data;
-        setDocuments(prev => [createdDoc, ...prev]);
-        navigate(`/dashboard/documents/${createdDoc._id}/edit`, { 
-          state: { document: createdDoc }
+        navigate(`/dashboard/documents/${response.data._id}/edit`, { 
+          state: { document: response.data }
         });
       }
     } catch (error) {
-      console.error('Error creating document:', error);
+      console.error('Error creating new story:', error);
     }
   };
 

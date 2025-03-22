@@ -21,9 +21,9 @@ const locationSchema = new mongoose.Schema({
     enum: ['primary', 'secondary', 'minor'],
     default: 'secondary'
   }
-});
+}, { timestamps: true });
 
-const timelineSchema = new mongoose.Schema({
+const timelinePeriodSchema = new mongoose.Schema({
   period: {
     type: String,
     required: true,
@@ -38,7 +38,7 @@ const timelineSchema = new mongoose.Schema({
     type: Number,
     default: 0
   }
-});
+}, { timestamps: true });
 
 const settingSchema = new mongoose.Schema({
   document: {
@@ -54,15 +54,13 @@ const settingSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  locations: [locationSchema],
-  timeline: [timelineSchema],
   worldDetails: {
     type: String,
     default: ''
-  }
-}, {
-  timestamps: true
-});
+  },
+  locations: [locationSchema],
+  timeline: [timelinePeriodSchema]
+}, { timestamps: true });
 
 // Add index for faster queries
 settingSchema.index({ document: 1 });

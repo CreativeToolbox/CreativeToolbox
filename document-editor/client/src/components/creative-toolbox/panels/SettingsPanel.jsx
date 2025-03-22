@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -38,6 +38,7 @@ import {
   deleteTimelinePeriod
 } from '../../../services/api';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { debounce } from 'lodash';
 
 const LOCATION_TYPES = {
   city: 'City',
@@ -74,6 +75,51 @@ export default function SettingsPanel({ documentId }) {
     description: ''
   });
 
+  // Add refs to store latest values
+  const settingRef = useRef(setting);
+  useEffect(() => {
+    settingRef.current = setting;
+  }, [setting]);
+
+  // Create debounced update function
+  const debouncedUpdateSetting = useCallback(
+    debounce(async (updates) => {
+      try {
+        console.log('Saving settings updates:', updates);
+        const response = await updateSetting(documentId, updates);
+        console.log('Save response:', response);
+        
+        if (!response || !response.data) {
+          throw new Error('No response data from settings update');
+        }
+        
+        setError(null);
+        // Update local state with server response
+        setSetting(response.data);
+      } catch (err) {
+        console.error('Failed to save settings:', err);
+        setError('Failed to save changes');
+      }
+    }, 1000),
+    [documentId]
+  );
+
+  // Add cleanup and final save on unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending debounced calls
+      debouncedUpdateSetting.cancel();
+
+      // If there are unsaved changes, save them
+      const currentSetting = settingRef.current;
+      if (currentSetting) {
+        updateSetting(documentId, currentSetting).catch(err => {
+          console.error('Failed to save final settings:', err);
+        });
+      }
+    };
+  }, [documentId, debouncedUpdateSetting]);
+
   useEffect(() => {
     loadSetting();
   }, [documentId]);
@@ -82,52 +128,65 @@ export default function SettingsPanel({ documentId }) {
     try {
       setLoading(true);
       const response = await getSetting(documentId);
-      console.log('Loaded settings data:', response); // Debug log
+      console.log('Loading settings for document:', documentId);
+      console.log('Raw settings response:', response);
+      
+      // Check if we have a valid response
+      if (!response || !response.data) {
+        console.warn('No settings data received');
+        return;
+      }
+      
+      const settingData = response.data;
+      console.log('Processed settings data:', settingData);
       
       // Set default values if data is missing
       setSetting({
-        mainLocation: response?.mainLocation || '',
-        timePeriod: response?.timePeriod || '',
-        worldDetails: response?.worldDetails || '',
-        locations: response?.locations || [],
-        timeline: response?.timeline || [],
-        ...response
+        mainLocation: settingData?.mainLocation || '',
+        timePeriod: settingData?.timePeriod || '',
+        worldDetails: settingData?.worldDetails || '',
+        locations: settingData?.locations || [],
+        timeline: settingData?.timeline || [],
+        ...settingData
       });
       setError(null);
     } catch (err) {
-      setError('Failed to load settings');
       console.error('Error loading settings:', err);
+      setError('Failed to load settings');
     } finally {
       setLoading(false);
     }
   };
 
   // Main setting handlers
-  const handleMainLocationChange = async (mainLocation) => {
-    try {
-      await updateSetting(documentId, { mainLocation });
-      setSetting({ ...setting, mainLocation });
-    } catch (err) {
-      setError('Failed to update main location');
-    }
+  const handleMainLocationChange = (value) => {
+    console.log('Updating main location:', value);
+    const updatedSetting = {
+      ...setting,
+      mainLocation: value
+    };
+    setSetting(updatedSetting);
+    debouncedUpdateSetting(updatedSetting); // Send entire setting object
   };
 
-  const handleTimePeriodChange = async (timePeriod) => {
-    try {
-      await updateSetting(documentId, { timePeriod });
-      setSetting({ ...setting, timePeriod });
-    } catch (err) {
-      setError('Failed to update time period');
-    }
+  const handleTimePeriodChange = (value) => {
+    console.log('Updating time period:', value);
+    const updatedSetting = {
+      ...setting,
+      timePeriod: value
+    };
+    setSetting(updatedSetting);
+    debouncedUpdateSetting(updatedSetting); // Send entire setting object
   };
 
-  const handleWorldDetailsChange = async (worldDetails) => {
-    try {
-      await updateSetting(documentId, { worldDetails });
-      setSetting({ ...setting, worldDetails });
-    } catch (err) {
-      setError('Failed to update world details');
-    }
+  const handleWorldDetailsChange = (value) => {
+    console.log('Updating world details:', value);
+    const updatedSetting = {
+      ...setting,
+      worldDetails: value
+    };
+    setSetting(updatedSetting);
+    debouncedUpdateSetting(updatedSetting); // Send entire setting object
   };
 
   // Location handlers

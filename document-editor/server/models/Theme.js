@@ -1,21 +1,21 @@
 const mongoose = require('mongoose');
 
-const symbolSchema = new mongoose.Schema({
+const mainThemeSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
     trim: true
   },
-  meaning: {
+  description: {
     type: String,
     default: '',
     trim: true
   },
-  occurrences: [{
-    context: String,
-    significance: String
-  }]
-});
+  exploration: {
+    type: String,
+    default: ''
+  }
+}, { timestamps: true });
 
 const motifSchema = new mongoose.Schema({
   name: {
@@ -30,10 +30,36 @@ const motifSchema = new mongoose.Schema({
   },
   purpose: {
     type: String,
+    default: ''
+  }
+}, { timestamps: true });
+
+const occurrenceSchema = new mongoose.Schema({
+  context: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  significance: {
+    type: String,
     default: '',
     trim: true
   }
 });
+
+const symbolSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  meaning: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  occurrences: [occurrenceSchema]
+}, { timestamps: true });
 
 const themeSchema = new mongoose.Schema({
   document: {
@@ -41,28 +67,10 @@ const themeSchema = new mongoose.Schema({
     ref: 'Document',
     required: true
   },
-  mainThemes: [{
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    description: {
-      type: String,
-      default: '',
-      trim: true
-    },
-    exploration: {
-      type: String,
-      default: '',
-      trim: true
-    }
-  }],
+  mainThemes: [mainThemeSchema],
   motifs: [motifSchema],
   symbols: [symbolSchema]
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Add index for faster queries
 themeSchema.index({ document: 1 });

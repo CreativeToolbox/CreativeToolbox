@@ -23,20 +23,37 @@ api.interceptors.response.use(
   }
 );
 
+// Add at the top of the file
+let cachedToken = null;
+let tokenExpiryTime = null;
+
+// Add this function to manage token caching
+const getAuthToken = async () => {
+  // If we have a cached token and it's not expired, use it
+  if (cachedToken && tokenExpiryTime && Date.now() < tokenExpiryTime) {
+    return cachedToken;
+  }
+
+  // Otherwise, get a new token
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('No user logged in');
+  }
+
+  const token = await user.getIdToken();
+  cachedToken = token;
+  // Set expiry to 55 minutes (tokens typically last 1 hour)
+  tokenExpiryTime = Date.now() + (55 * 60 * 1000);
+  return token;
+};
+
 // Update the request interceptor
 api.interceptors.request.use(async (config) => {
-  const user = auth.currentUser;
-  if (user) {
-    try {
-      console.log('Getting token for request:', config.url);
-      const token = await user.getIdToken(true); // Force refresh
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Token added to request');
-    } catch (error) {
-      console.error('Error getting token:', error);
-    }
-  } else {
-    console.log('No user logged in for request:', config.url);
+  try {
+    const token = await getAuthToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  } catch (error) {
+    console.error('Error getting token:', error);
   }
   return config;
 });
@@ -192,8 +209,9 @@ export const updateCharacterRelationships = async (characterId, relationships) =
   return api.put(`/characters/${characterId}/relationships`, { relationships });
 };
 
-// Add these new plot-related functions
+// Update the getPlot function to match the pattern of getStory
 export const getPlot = async (documentId) => {
+  console.log('Fetching plot for document:', documentId);
   try {
     const user = auth.currentUser;
     if (!user) {
@@ -208,6 +226,18 @@ export const getPlot = async (documentId) => {
     });
     
     console.log('Plot API response:', response.data);
+    
+    // Return default values if no plot exists
+    if (!response.data) {
+      return {
+        structure: 'three_act',
+        mainConflict: '',
+        synopsis: '',
+        plotPoints: [],
+        mainConflictCharacters: []
+      };
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Error fetching plot:', error);
@@ -215,119 +245,295 @@ export const getPlot = async (documentId) => {
   }
 };
 
-export const updatePlot = async (documentId, data) => {
-  const token = await auth.currentUser.getIdToken();
-  return api.put(`/plots/document/${documentId}`, data, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+// Update other plot-related functions to include auth headers
+export const updatePlot = async (documentId, plotData) => {
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/plots/document/${documentId}`, 
+    plotData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     }
-  });
+  );
 };
 
-export const addPlotPoint = async (documentId, data) => {
-  const token = await auth.currentUser.getIdToken();
-  return api.post(`/plots/document/${documentId}/points`, data, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+export const addPlotPoint = async (documentId, pointData) => {
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/plots/document/${documentId}/points`, 
+    pointData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     }
-  });
+  );
 };
 
 export const updatePlotPoint = async (documentId, pointId, data) => {
-  const token = await auth.currentUser.getIdToken();
-  return api.put(`/plots/document/${documentId}/points/${pointId}`, data, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/plots/document/${documentId}/points/${pointId}`, 
+    data,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     }
-  });
+  );
 };
 
 export const deletePlotPoint = async (documentId, pointId) => {
-  const token = await auth.currentUser.getIdToken();
-  return api.delete(`/plots/document/${documentId}/points/${pointId}`, {
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/plots/document/${documentId}/points/${pointId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
+};
+
+// Settings endpoints
+export const getSetting = async (documentId) => {
+  const token = await auth.currentUser?.getIdToken();
+  return api.get(`/settings/document/${documentId}`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
 };
 
-// Add these setting-related functions
-export const getSetting = async (documentId) => {
-  return api.get(`/settings/document/${documentId}`);
-};
-
 export const updateSetting = async (documentId, settingData) => {
-  return api.put(`/settings/document/${documentId}`, settingData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/settings/document/${documentId}`, 
+    settingData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
+// Location endpoints
 export const addLocation = async (documentId, locationData) => {
-  return api.post(`/settings/document/${documentId}/locations`, locationData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/settings/document/${documentId}/locations`, 
+    locationData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const updateLocation = async (documentId, locationId, updates) => {
-  return api.put(`/settings/document/${documentId}/locations/${locationId}`, updates);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/settings/document/${documentId}/locations/${locationId}`, 
+    updates,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const deleteLocation = async (documentId, locationId) => {
-  return api.delete(`/settings/document/${documentId}/locations/${locationId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/settings/document/${documentId}/locations/${locationId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
+// Timeline period endpoints
 export const addTimelinePeriod = async (documentId, periodData) => {
-  return api.post(`/settings/document/${documentId}/timeline`, periodData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/settings/document/${documentId}/timeline`, 
+    periodData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const updateTimelinePeriod = async (documentId, periodId, updates) => {
-  return api.put(`/settings/document/${documentId}/timeline/${periodId}`, updates);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/settings/document/${documentId}/timeline/${periodId}`, 
+    updates,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const deleteTimelinePeriod = async (documentId, periodId) => {
-  return api.delete(`/settings/document/${documentId}/timeline/${periodId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/settings/document/${documentId}/timeline/${periodId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
-// Add these theme-related functions
+// Themes endpoints
 export const getTheme = async (documentId) => {
-  return api.get(`/themes/document/${documentId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.get(`/themes/document/${documentId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 };
 
 export const updateTheme = async (documentId, themeData) => {
-  return api.put(`/themes/document/${documentId}`, themeData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/themes/document/${documentId}`, 
+    themeData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
-// Main themes
+// Theme-specific endpoints
 export const addMainTheme = async (documentId, themeData) => {
-  return api.post(`/themes/document/${documentId}/main-themes`, themeData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/themes/document/${documentId}/main-themes`, 
+    themeData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const updateMainTheme = async (documentId, themeId, updates) => {
-  return api.put(`/themes/document/${documentId}/main-themes/${themeId}`, updates);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/themes/document/${documentId}/main-themes/${themeId}`, 
+    updates,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const deleteMainTheme = async (documentId, themeId) => {
-  return api.delete(`/themes/document/${documentId}/main-themes/${themeId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/themes/document/${documentId}/main-themes/${themeId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 // Motifs
 export const addMotif = async (documentId, motifData) => {
-  return api.post(`/themes/document/${documentId}/motifs`, motifData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/themes/document/${documentId}/motifs`, 
+    motifData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const updateMotif = async (documentId, motifId, updates) => {
-  return api.put(`/themes/document/${documentId}/motifs/${motifId}`, updates);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/themes/document/${documentId}/motifs/${motifId}`, 
+    updates,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const deleteMotif = async (documentId, motifId) => {
-  return api.delete(`/themes/document/${documentId}/motifs/${motifId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/themes/document/${documentId}/motifs/${motifId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 // Symbols
 export const addSymbol = async (documentId, symbolData) => {
-  return api.post(`/themes/document/${documentId}/symbols`, symbolData);
+  const token = await auth.currentUser?.getIdToken();
+  return api.post(
+    `/themes/document/${documentId}/symbols`, 
+    symbolData,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const updateSymbol = async (documentId, symbolId, updates) => {
-  return api.put(`/themes/document/${documentId}/symbols/${symbolId}`, updates);
+  const token = await auth.currentUser?.getIdToken();
+  return api.put(
+    `/themes/document/${documentId}/symbols/${symbolId}`, 
+    updates,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };
 
 export const deleteSymbol = async (documentId, symbolId) => {
-  return api.delete(`/themes/document/${documentId}/symbols/${symbolId}`);
+  const token = await auth.currentUser?.getIdToken();
+  return api.delete(
+    `/themes/document/${documentId}/symbols/${symbolId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    }
+  );
 };

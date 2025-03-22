@@ -1,20 +1,30 @@
 const Theme = require('../models/Theme');
+const mongoose = require('mongoose');
 
 exports.getTheme = async (req, res) => {
   try {
-    const { documentId } = req.params;
-    let theme = await Theme.findOne({ document: documentId });
+    const documentId = req.params.documentId;
+    console.log('Getting theme for document:', documentId);
+
+    const objectId = mongoose.Types.ObjectId.isValid(documentId) 
+      ? new mongoose.Types.ObjectId(documentId)
+      : documentId;
+
+    let theme = await Theme.findOne({ document: objectId });
+    console.log('Found theme:', theme);
     
+    // If no theme exists, create a default one
     if (!theme) {
-      // Create default theme if none exists
+      console.log('No theme found, creating default');
       theme = await Theme.create({
-        document: documentId,
+        document: objectId,
         mainThemes: [],
         motifs: [],
         symbols: []
       });
+      console.log('Created default theme:', theme);
     }
-    
+
     res.json(theme);
   } catch (error) {
     console.error('Error in getTheme:', error);
@@ -26,12 +36,28 @@ exports.updateTheme = async (req, res) => {
   try {
     const { documentId } = req.params;
     const updates = req.body;
+    console.log('Updating theme for document:', documentId);
+    console.log('Received updates:', updates);
 
-    const theme = await Theme.findOneAndUpdate(
-      { document: documentId },
-      updates,
-      { new: true, upsert: true, runValidators: true }
-    );
+    // First, find the existing theme or create a default one
+    let theme = await Theme.findOne({ document: documentId });
+    if (!theme) {
+      theme = new Theme({
+        document: documentId,
+        mainThemes: [],
+        motifs: [],
+        symbols: []
+      });
+    }
+
+    // Update only the fields that are present in the updates object
+    if (updates.mainThemes !== undefined) theme.mainThemes = updates.mainThemes;
+    if (updates.motifs !== undefined) theme.motifs = updates.motifs;
+    if (updates.symbols !== undefined) theme.symbols = updates.symbols;
+
+    // Save the updated document
+    await theme.save();
+    console.log('Saved theme:', theme);
 
     res.json(theme);
   } catch (error) {
@@ -40,7 +66,7 @@ exports.updateTheme = async (req, res) => {
   }
 };
 
-// Main themes management
+// Main themes handlers
 exports.addMainTheme = async (req, res) => {
   try {
     const { documentId } = req.params;
@@ -107,7 +133,7 @@ exports.deleteMainTheme = async (req, res) => {
   }
 };
 
-// Motif management
+// Motif handlers
 exports.addMotif = async (req, res) => {
   try {
     const { documentId } = req.params;
@@ -174,7 +200,7 @@ exports.deleteMotif = async (req, res) => {
   }
 };
 
-// Symbol management
+// Symbol handlers
 exports.addSymbol = async (req, res) => {
   try {
     const { documentId } = req.params;
