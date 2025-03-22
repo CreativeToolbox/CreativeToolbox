@@ -21,14 +21,33 @@ api.interceptors.response.use(
   }
 );
 
+// Update the request interceptor to be more aggressive with token refresh
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {
-    const token = await user.getIdToken();
-    config.headers.Authorization = `Bearer ${token}`;
+    try {
+      // Always force a new token on requests to /documents endpoints
+      const forceRefresh = config.url.includes('/documents/');
+      const token = await user.getIdToken(forceRefresh);
+      config.headers.Authorization = `Bearer ${token}`;
+    } catch (error) {
+      console.error('Error getting token:', error);
+    }
   }
   return config;
 });
+
+// Simplify the response interceptor to avoid double-refresh issues
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Force user to reauthenticate if we get a 401
+      auth.signOut();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // API endpoints
 // Update the getDocuments function
@@ -37,7 +56,9 @@ export const getDocuments = (mode = 'public') => {
 };
 export const getDocument = (id) => api.get(`/documents/${id}`);
 export const createDocument = (data) => api.post('/documents', data);
-export const updateDocument = (id, data) => api.put(`/documents/${id}`, data);
+export const updateDocument = (id, data) => {
+  return api.put(`/documents/${id}`, data);
+};
 export const deleteDocument = (id) => api.delete(`/documents/${id}`);
 
 // Optional: Add health check endpoint

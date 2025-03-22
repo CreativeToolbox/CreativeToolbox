@@ -1,22 +1,24 @@
-const admin = require('firebase-admin');
+const admin = require('../config/firebase');
 
 const authMiddleware = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    const token = authHeader.split('Bearer ')[1];
+    console.log('Verifying token...');
     const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = {
-      uid: decodedToken.uid,
-      email: decodedToken.email
-    };
+    console.log('Token verified successfully');
+    req.user = decodedToken;
     next();
   } catch (error) {
     console.error('Auth Error:', error);
-    res.status(401).json({ message: 'Invalid token' });
+    console.error('Request headers:', req.headers);
+    return res.status(401).json({ 
+      message: 'Invalid token',
+      error: error.message 
+    });
   }
 };
 

@@ -14,6 +14,7 @@ import { getDocument, updateDocument } from '../services/api';
 import SelectionPopup from './SelectionPopup';
 import ToolboxSidebar from './creative-toolbox/ToolboxSidebar';
 import { rewriteText } from '../services/ai';
+import { auth } from '../firebase/config';
 
 // Debounce helper function
 const debounce = (func, wait) => {
@@ -70,9 +71,15 @@ const [showUndo, setShowUndo] = useState(false);
 
   // Create memoized autoSave function
   const autoSave = useCallback(
-    debounce(async (docData) => {
+    debounce(async (docData, retryCount = 0) => {
       if (!docData.title.trim()) {
         setSaveStatus('Title is required');
+        return;
+      }
+      
+      // Don't retry more than 2 times
+      if (retryCount >= 2) {
+        setSaveStatus('Unable to save - please refresh the page');
         return;
       }
       
@@ -84,13 +91,27 @@ const [showUndo, setShowUndo] = useState(false);
         setSaveStatus('Saved!');
       } catch (error) {
         console.error('Error auto-saving:', error);
-        setSaveStatus('Error saving!');
+        if (error.response?.status === 401) {
+          // Check if user is still logged in
+          if (!auth.currentUser) {
+            setSaveStatus('Please log in to continue');
+            navigate('/login');
+          } else if (retryCount < 2) {
+            setSaveStatus('Retrying save...');
+            // Wait a moment and try again with incremented retry count
+            setTimeout(() => autoSave(docData, retryCount + 1), 1000);
+          }
+        } else {
+          setSaveStatus('Error saving!');
+        }
       } finally {
         setSaving(false);
-        setTimeout(() => setSaveStatus(''), 2000);
+        if (saveStatus !== 'Retrying save...') {
+          setTimeout(() => setSaveStatus(''), 2000);
+        }
       }
     }, 1000),
-    [id]
+    [id, navigate]
   );
 
   const handleTitleChange = (event) => {
@@ -98,7 +119,7 @@ const [showUndo, setShowUndo] = useState(false);
     if (newTitle.trim()) {
       const newDoc = { ...currentDoc, title: newTitle };
       setCurrentDoc(newDoc);
-      autoSave(newDoc);
+      autoSave(newDoc, 0);
     } else {
       setCurrentDoc(prev => ({ ...prev, title: newTitle }));
     }
@@ -107,7 +128,7 @@ const [showUndo, setShowUndo] = useState(false);
   const handleContentChange = (content) => {
     const newDoc = { ...currentDoc, content };
     setCurrentDoc(newDoc);
-    autoSave(newDoc);
+    autoSave(newDoc, 0); // Start with retry count 0
   };
 
   // Manual save button (optional, since we have autosave)
