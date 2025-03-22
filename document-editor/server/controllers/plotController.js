@@ -2,20 +2,35 @@ const Plot = require('../models/Plot');
 
 exports.getPlot = async (req, res) => {
   try {
-    const { documentId } = req.params;
-    let plot = await Plot.findOne({ document: documentId })
-      .populate('mainConflictCharacters')
-      .populate('plotPoints.involvedCharacters');
-
+    const documentId = req.params.documentId;
+    let plot = await Plot.findOne({ document: documentId });
+    
+    // Create default plot if none exists
     if (!plot) {
       plot = await Plot.create({
         document: documentId,
         structure: 'three_act',
-        plotPoints: []
+        mainConflict: '',
+        synopsis: '',
+        plotPoints: [],
+        mainConflictCharacters: []
       });
     }
-    
-    res.json(plot);
+
+    const response = {
+      _id: plot._id,
+      document: plot.document,
+      structure: plot.structure || 'three_act',
+      mainConflict: plot.mainConflict || '',
+      synopsis: plot.synopsis || '',
+      plotPoints: plot.plotPoints || [],
+      mainConflictCharacters: plot.mainConflictCharacters || [],
+      createdAt: plot.createdAt,
+      updatedAt: plot.updatedAt
+    };
+
+    console.log('Returning plot:', response);
+    res.json(response);
   } catch (error) {
     console.error('Error in getPlot:', error);
     res.status(500).json({ message: error.message });

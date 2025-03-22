@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { auth } from '../firebase/config';
 
-const API_BASE_URL = 'https://document-editor-api.onrender.com/api';
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api'
+  : 'https://document-editor-api.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -21,18 +23,20 @@ api.interceptors.response.use(
   }
 );
 
-// Update the request interceptor to be more aggressive with token refresh
+// Update the request interceptor
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {
     try {
-      // Always force a new token on requests to /documents endpoints
-      const forceRefresh = config.url.includes('/documents/');
-      const token = await user.getIdToken(forceRefresh);
+      console.log('Getting token for request:', config.url);
+      const token = await user.getIdToken(true); // Force refresh
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request');
     } catch (error) {
       console.error('Error getting token:', error);
     }
+  } else {
+    console.log('No user logged in for request:', config.url);
   }
   return config;
 });
@@ -56,8 +60,26 @@ export const getDocuments = (mode = 'public') => {
 };
 export const getDocument = (id) => api.get(`/documents/${id}`);
 export const createDocument = (data) => api.post('/documents', data);
-export const updateDocument = (id, data) => {
-  return api.put(`/documents/${id}`, data);
+export const updateDocument = async (id, data) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    
+    const token = await user.getIdToken();
+    console.log('Updating document with token:', token.substring(0, 20) + '...');
+    
+    const response = await api.put(`/documents/${id}`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating document:', error);
+    throw error;
+  }
 };
 export const deleteDocument = (id) => api.delete(`/documents/${id}`);
 
@@ -112,8 +134,35 @@ export const toggleCharacterTracking = async (documentId, enabled) => {
 
 export const getStory = async (documentId) => {
   console.log('Fetching story for document:', documentId);
-  console.log('API URL:', `${API_BASE_URL}/stories/document/${documentId}`);
-  return axios.get(`${API_BASE_URL}/stories/document/${documentId}`);
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    
+    const token = await user.getIdToken();
+    const response = await api.get(`/stories/document/${documentId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // Log the response data
+    console.log('Story API response:', response.data);
+    
+    // Return default values if no story exists
+    if (!response.data) {
+      return {
+        mode: { narrative: 50, dialogue: 50 },
+        mood: 'peaceful'
+      };
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching story:', error);
+    throw error;
+  }
 };
 
 export const updateStoryMood = async (documentId, mood) => {
@@ -145,23 +194,61 @@ export const updateCharacterRelationships = async (characterId, relationships) =
 
 // Add these new plot-related functions
 export const getPlot = async (documentId) => {
-  return api.get(`/plots/document/${documentId}`);
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+    
+    const token = await user.getIdToken();
+    const response = await api.get(`/plots/document/${documentId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    console.log('Plot API response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching plot:', error);
+    throw error;
+  }
 };
 
-export const updatePlot = async (documentId, plotData) => {
-  return api.put(`/plots/document/${documentId}`, plotData);
+export const updatePlot = async (documentId, data) => {
+  const token = await auth.currentUser.getIdToken();
+  return api.put(`/plots/document/${documentId}`, data, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 };
 
-export const addPlotPoint = async (documentId, pointData) => {
-  return api.post(`/plots/document/${documentId}/points`, pointData);
+export const addPlotPoint = async (documentId, data) => {
+  const token = await auth.currentUser.getIdToken();
+  return api.post(`/plots/document/${documentId}/points`, data, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 };
 
-export const updatePlotPoint = async (documentId, pointId, updates) => {
-  return api.put(`/plots/document/${documentId}/points/${pointId}`, updates);
+export const updatePlotPoint = async (documentId, pointId, data) => {
+  const token = await auth.currentUser.getIdToken();
+  return api.put(`/plots/document/${documentId}/points/${pointId}`, data, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 };
 
 export const deletePlotPoint = async (documentId, pointId) => {
-  return api.delete(`/plots/document/${documentId}/points/${pointId}`);
+  const token = await auth.currentUser.getIdToken();
+  return api.delete(`/plots/document/${documentId}/points/${pointId}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
 };
 
 // Add these setting-related functions

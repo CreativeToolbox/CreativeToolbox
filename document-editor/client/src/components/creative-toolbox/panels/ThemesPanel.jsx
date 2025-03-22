@@ -81,11 +81,19 @@ export default function ThemesPanel({ documentId }) {
     try {
       setLoading(true);
       const response = await getTheme(documentId);
-      setTheme(response.data);
+      console.log('Loaded theme data:', response); // Debug log
+      
+      // Set default values if data is missing
+      setTheme({
+        mainThemes: response?.mainThemes || [],
+        motifs: response?.motifs || [],
+        symbols: response?.symbols || [],
+        ...response
+      });
       setError(null);
     } catch (err) {
       setError('Failed to load themes');
-      console.error(err);
+      console.error('Error loading themes:', err);
     } finally {
       setLoading(false);
     }

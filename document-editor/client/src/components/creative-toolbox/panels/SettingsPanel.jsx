@@ -82,11 +82,21 @@ export default function SettingsPanel({ documentId }) {
     try {
       setLoading(true);
       const response = await getSetting(documentId);
-      setSetting(response.data);
+      console.log('Loaded settings data:', response); // Debug log
+      
+      // Set default values if data is missing
+      setSetting({
+        mainLocation: response?.mainLocation || '',
+        timePeriod: response?.timePeriod || '',
+        worldDetails: response?.worldDetails || '',
+        locations: response?.locations || [],
+        timeline: response?.timeline || [],
+        ...response
+      });
       setError(null);
     } catch (err) {
       setError('Failed to load settings');
-      console.error(err);
+      console.error('Error loading settings:', err);
     } finally {
       setLoading(false);
     }

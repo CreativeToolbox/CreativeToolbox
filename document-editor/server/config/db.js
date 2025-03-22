@@ -15,35 +15,10 @@ const validateDbName = (dbName) => {
 
 const connectDB = async () => {
   try {
-    console.log('Attempting to connect to MongoDB...');
-    
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4
-    });
-    
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    console.log(`Database Name: ${conn.connection.name}`);
-    
-    // Validate database name
-    validateDbName(conn.connection.name);
-    
-    mongoose.connection.on('error', err => {
-      console.error('MongoDB connection error:', err);
-    });
-
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('📦 MongoDB Connected');
   } catch (error) {
-    console.error('MongoDB connection error details:', {
-      name: error.name,
-      message: error.message,
-      code: error.code,
-      codeName: error.codeName
-    });
+    console.error('MongoDB connection error:', error);
     process.exit(1);
   }
 };

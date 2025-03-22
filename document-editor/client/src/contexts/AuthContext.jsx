@@ -1,3 +1,4 @@
+// authContext.js
 import { createContext, useContext, useState, useEffect } from 'react';
 import { 
   createUserWithEmailAndPassword,
@@ -18,36 +19,37 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Signup function
+  // Auth state observer
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setLoading(false); // Finished loading the user state
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Function to handle sign-up
   function signup(email, password) {
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
-  // Login function
+  // Function to handle login
   function login(email, password) {
     return signInWithEmailAndPassword(auth, email, password);
   }
 
-  // Logout function
+  // Function to handle logout
   function logout() {
     return signOut(auth);
   }
 
-  // Password reset function
+  // Function to handle password reset
   function resetPassword(email) {
     return sendPasswordResetEmail(auth, email);
   }
 
-  // Set up auth state observer
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
+  // Value provided to children components
   const value = {
     currentUser,
     signup,
@@ -56,9 +58,14 @@ export function AuthProvider({ children }) {
     resetPassword
   };
 
+  // Only render children once authentication state is loaded
+  if (loading) {
+    return <div>Loading...</div>; // Optionally show a loading spinner here
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

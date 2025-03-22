@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Story = require('../models/Story');
 
 const VALID_MOOD_PRESETS = Object.freeze([
@@ -15,8 +16,37 @@ exports.VALID_MOOD_PRESETS = VALID_MOOD_PRESETS;
 
 exports.getStory = async (req, res) => {
   try {
-    const story = await Story.ensureStoryExists(req.params.documentId);
-    res.json(story);
+    const documentId = req.params.documentId;
+    console.log('Getting story for document:', documentId);
+
+    // Convert string ID to ObjectId if needed
+    const objectId = mongoose.Types.ObjectId.isValid(documentId) 
+      ? new mongoose.Types.ObjectId(documentId)
+      : documentId;
+
+    let story = await Story.findOne({ document: objectId });
+    
+    // If no story exists, create a default one
+    if (!story) {
+      story = await Story.create({
+        document: objectId,
+        mode: { narrative: 50, dialogue: 50 },
+        mood: 'peaceful'
+      });
+    }
+
+    // Ensure we're sending a properly formatted response
+    const response = {
+      _id: story._id,
+      document: story.document,
+      mode: story.mode || { narrative: 50, dialogue: 50 },
+      mood: story.mood || 'peaceful',
+      createdAt: story.createdAt,
+      updatedAt: story.updatedAt
+    };
+    
+    console.log('Returning story:', response);
+    res.json(response);
   } catch (error) {
     console.error('Error in getStory:', error);
     res.status(500).json({ message: error.message });

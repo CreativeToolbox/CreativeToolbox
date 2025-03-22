@@ -120,11 +120,21 @@ export default function PlotPanel({ documentId }) {
     try {
       setLoading(true);
       const response = await getPlot(documentId);
-      setPlot(response.data);
+      console.log('Loaded plot data:', response); // Debug log
+      
+      // Set default values if data is missing
+      setPlot({
+        structure: response?.structure || 'three_act',
+        mainConflict: response?.mainConflict || '',
+        synopsis: response?.synopsis || '',
+        plotPoints: response?.plotPoints || [],
+        mainConflictCharacters: response?.mainConflictCharacters || [],
+        ...response
+      });
       setError(null);
     } catch (err) {
       setError('Failed to load plot');
-      console.error(err);
+      console.error('Error loading plot:', err);
     } finally {
       setLoading(false);
     }

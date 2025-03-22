@@ -7,8 +7,9 @@ import {
   Button, 
   Stack,
   Box,
-  Snackbar, // Add this
-  Alert    // Add this
+  Snackbar,
+  Alert,
+  CircularProgress
 } from '@mui/material';
 import { getDocument, updateDocument } from '../services/api';
 import SelectionPopup from './SelectionPopup';
@@ -33,21 +34,86 @@ export default function DocumentEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentDoc, setCurrentDoc] = useState(() => {
-    return location.state?.document || { title: '', content: '' };
-  });
+  
+  // Move all hooks to the top, before any conditional logic
+  const [currentDoc, setCurrentDoc] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [popupPosition, setPopupPosition] = useState(null);
   const [lastEdit, setLastEdit] = useState(null);
-const [showUndo, setShowUndo] = useState(false);
-
-  // Add state for character tracking
+  const [showUndo, setShowUndo] = useState(false);
   const [characterTrackingEnabled, setCharacterTrackingEnabled] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Add this to track sidebar state
-
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  
   const editorRef = useRef(null);
+
+  // Define autoSave callback before using it
+  const autoSave = useCallback(
+    debounce(async (docData, retryCount = 0) => {
+      if (!docData.title.trim()) {
+        setSaveStatus('Title is required');
+        return;
+      }
+      
+      if (retryCount >= 2) {
+        setSaveStatus('Unable to save - please refresh the page');
+        return;
+      }
+      
+      try {
+        setSaving(true);
+        setSaveStatus('Saving...');
+        const response = await updateDocument(id, docData);
+        
+        // Only update state if the save was successful
+        if (response?.data) {
+          setCurrentDoc(response.data);
+          setSaveStatus('Saved!');
+        }
+      } catch (error) {
+        console.error('Error auto-saving:', error);
+        if (error.response?.status === 401) {
+          if (!auth.currentUser) {
+            setSaveStatus('Please log in to continue');
+            navigate('/login');
+          } else if (retryCount < 2) {
+            setSaveStatus('Retrying save...');
+            setTimeout(() => autoSave(docData, retryCount + 1), 1000);
+          }
+        } else {
+          setSaveStatus('Error saving!');
+        }
+      } finally {
+        setSaving(false);
+        // Only clear save status if we're not retrying
+        if (!saveStatus.includes('Retrying')) {
+          setTimeout(() => setSaveStatus(''), 2000);
+        }
+      }
+    }, 1000),
+    [id, navigate]
+  );
+
+  const handleTitleChange = useCallback((event) => {
+    const newTitle = event.target.value;
+    setCurrentDoc(prev => {
+      const newDoc = { ...prev, title: newTitle };
+      // Only trigger autosave if title is not empty
+      if (newTitle.trim()) {
+        autoSave(newDoc);
+      }
+      return newDoc;
+    });
+  }, [autoSave]);
+
+  const handleContentChange = useCallback((content) => {
+    setCurrentDoc(prev => {
+      const newDoc = { ...prev, content };
+      autoSave(newDoc);
+      return newDoc;
+    });
+  }, [autoSave]);
 
   useEffect(() => {
     if (!location.state?.document) {
@@ -69,69 +135,20 @@ const [showUndo, setShowUndo] = useState(false);
     }
   };
 
-  // Create memoized autoSave function
-  const autoSave = useCallback(
-    debounce(async (docData, retryCount = 0) => {
-      if (!docData.title.trim()) {
-        setSaveStatus('Title is required');
-        return;
-      }
-      
-      // Don't retry more than 2 times
-      if (retryCount >= 2) {
-        setSaveStatus('Unable to save - please refresh the page');
-        return;
-      }
-      
-      setSaving(true);
-      setSaveStatus('Saving...');
-      try {
-        const response = await updateDocument(id, docData);
-        setCurrentDoc(response.data);
-        setSaveStatus('Saved!');
-      } catch (error) {
-        console.error('Error auto-saving:', error);
-        if (error.response?.status === 401) {
-          // Check if user is still logged in
-          if (!auth.currentUser) {
-            setSaveStatus('Please log in to continue');
-            navigate('/login');
-          } else if (retryCount < 2) {
-            setSaveStatus('Retrying save...');
-            // Wait a moment and try again with incremented retry count
-            setTimeout(() => autoSave(docData, retryCount + 1), 1000);
-          }
-        } else {
-          setSaveStatus('Error saving!');
-        }
-      } finally {
-        setSaving(false);
-        if (saveStatus !== 'Retrying save...') {
-          setTimeout(() => setSaveStatus(''), 2000);
-        }
-      }
-    }, 1000),
-    [id, navigate]
-  );
+  // Render loading state if document is not loaded
+  if (!currentDoc) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '90vh' 
+      }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  const handleTitleChange = (event) => {
-    const newTitle = event.target.value;
-    if (newTitle.trim()) {
-      const newDoc = { ...currentDoc, title: newTitle };
-      setCurrentDoc(newDoc);
-      autoSave(newDoc, 0);
-    } else {
-      setCurrentDoc(prev => ({ ...prev, title: newTitle }));
-    }
-  };
-
-  const handleContentChange = (content) => {
-    const newDoc = { ...currentDoc, content };
-    setCurrentDoc(newDoc);
-    autoSave(newDoc, 0); // Start with retry count 0
-  };
-
-  // Manual save button (optional, since we have autosave)
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -223,24 +240,6 @@ const [showUndo, setShowUndo] = useState(false);
     }
   };
 
-  // Add this if you don't have it already
-  const handleAutoSave = async (docToSave) => {
-    if (!docToSave) return;
-    
-    try {
-      setIsSaving(true);
-      await saveDocument(docToSave);
-      setLastSavedContent(docToSave.content);
-      setSaveStatus('success');
-    } catch (error) {
-      console.error('Autosave failed:', error);
-      setSaveStatus('error');
-      throw error;
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleUndo = () => {
     if (lastEdit) {
       const newContent = currentDoc.content.replace(lastEdit.newText, lastEdit.originalText);
@@ -322,7 +321,7 @@ const [showUndo, setShowUndo] = useState(false);
           <TextField
             fullWidth
             label="Title"
-            value={currentDoc.title}
+            value={currentDoc.title || ''}
             onChange={handleTitleChange}
             size="small"
           />
@@ -381,13 +380,15 @@ const [showUndo, setShowUndo] = useState(false);
         />
 
         {/* Save Status Snackbar */}
-        <Snackbar 
-          open={!!saveStatus} 
-          autoHideDuration={2000} 
-          onClose={() => setSaveStatus('')}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        <Snackbar
+          open={!!saveStatus}
+          autoHideDuration={2000}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          <Alert severity={saveStatus === 'Error saving!' ? 'error' : 'success'}>
+          <Alert 
+            severity={saveStatus.includes('Error') ? 'error' : 'success'}
+            sx={{ width: '100%' }}
+          >
             {saveStatus}
           </Alert>
         </Snackbar>

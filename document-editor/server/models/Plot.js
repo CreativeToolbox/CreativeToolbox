@@ -34,7 +34,7 @@ const plotPointSchema = new mongoose.Schema({
     type: Number,
     default: 0
   }
-});
+}, { timestamps: true });
 
 const plotSchema = new mongoose.Schema({
   document: {
@@ -60,9 +60,7 @@ const plotSchema = new mongoose.Schema({
     type: String,
     default: ''
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
 // Add index for faster queries
 plotSchema.index({ document: 1 });

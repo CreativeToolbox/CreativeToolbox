@@ -28,9 +28,18 @@ export default function ModePanel({ documentId }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await getStory(documentId);
-      const { narrative, dialogue } = response.data.mode;
-      setMode(narrative > dialogue ? 50 - (narrative / 2) : 50 + (dialogue / 2));
+      const story = await getStory(documentId);
+      console.log('Loaded story data:', story); // Debug log
+      
+      // Check if story and mode exist, otherwise use defaults
+      if (story && story.mode) {
+        const { narrative = 50, dialogue = 50 } = story.mode;
+        setMode(narrative > dialogue ? 50 - (narrative / 2) : 50 + (dialogue / 2));
+      } else {
+        // Set default mode
+        setMode(50); // Balanced mode
+        console.log('Using default mode values');
+      }
     } catch (err) {
       setError(
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -45,7 +54,7 @@ export default function ModePanel({ documentId }) {
           </Button>
         </Box>
       );
-      console.error(err);
+      console.error('Error loading story mode:', err);
     } finally {
       setLoading(false);
       setRetrying(false);

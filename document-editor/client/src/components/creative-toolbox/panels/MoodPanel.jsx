@@ -36,13 +36,20 @@ export default function MoodPanel({ documentId }) {
   const loadStoryMood = async () => {
     setLoading(true);
     try {
-      const response = await getStory(documentId);
-      if (response.data.mood) {
-        setMood(response.data.mood);
+      const story = await getStory(documentId);
+      console.log('Loaded story data:', story); // Debug log
+      
+      // Check if story and mood exist, otherwise use default
+      if (story && story.mood) {
+        setMood(story.mood);
+      } else {
+        // Set default mood
+        setMood('peaceful');
+        console.log('Using default mood value');
       }
     } catch (err) {
       setError('Failed to load story mood');
-      console.error(err);
+      console.error('Error loading story mood:', err);
     } finally {
       setLoading(false);
     }
