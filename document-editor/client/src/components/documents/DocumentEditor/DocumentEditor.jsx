@@ -7,6 +7,8 @@ import Editor from './Editor';
 import RightPanelManager from '../../creative-toolbox/panels/RightPanelManager';
 import AssistantPanel from '../../creative-toolbox/panels/AssistantPanel';
 import CreativeToolbox from '../../creative-toolbox/CreativeToolbox';
+import SceneManager from '../SceneManager/SceneManager';
+import { useTitle } from '../../../contexts/TitleContext';
 
 const RightPanelManagerMemo = memo(RightPanelManager);
 
@@ -15,9 +17,9 @@ const DocumentEditor = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const editorRef = useRef(null);
+  const { documentTitle, setDocumentTitle } = useTitle();
   
   const [document, setDocument] = useState(null);
-  const [title, setTitle] = useState('Untitled');
   const [content, setContent] = useState('');
   const [error, setError] = useState('');
   const [saveStatus, setSaveStatus] = useState('');
@@ -26,6 +28,7 @@ const DocumentEditor = () => {
   const loadDocument = useCallback(async () => {
     try {
       if (!id || id === 'new' || id === 'undefined') {
+        setDocumentTitle('New Story');
         return;
       }
 
@@ -35,7 +38,7 @@ const DocumentEditor = () => {
       if (response?.data) {
         console.log('Document loaded:', response.data);
         setDocument(response.data);
-        setTitle(response.data.title || 'Untitled');
+        setDocumentTitle(response.data.title || 'Untitled');
         const documentContent = response.data.content || '';
         console.log('Setting content:', documentContent);
         setContent(documentContent);
@@ -47,15 +50,11 @@ const DocumentEditor = () => {
       console.error('Error loading document:', error);
       setError('Failed to load document');
     }
-  }, [id]);
+  }, [id, setDocumentTitle]);
 
   useEffect(() => {
     loadDocument();
   }, [loadDocument]);
-
-  const handleTitleChange = (event) => {
-    setTitle(event.target.value);
-  };
 
   const handleContentChange = useCallback((newContent) => {
     setContent(newContent);
@@ -71,12 +70,12 @@ const DocumentEditor = () => {
   const handleSave = useCallback(async () => {
     try {
       setSaveStatus('saving');
-      console.log('Saving document:', { id, title, content });
+      console.log('Saving document:', { id, title: documentTitle, content });
       
       if (!id || id === 'new') {
         // Create new document
         const response = await createDocument({
-          title,
+          title: documentTitle,
           content,
           userId: currentUser.uid
         });
@@ -91,7 +90,7 @@ const DocumentEditor = () => {
       } else {
         // Update existing document
         const response = await updateDocument(id, {
-          title,
+          title: documentTitle,
           content,
         });
 
@@ -108,7 +107,7 @@ const DocumentEditor = () => {
       setSaveStatus('error');
       setError('Failed to save document');
     }
-  }, [id, title, content, currentUser?.uid, navigate]);
+  }, [id, documentTitle, content, currentUser?.uid, navigate]);
 
   const handleAIRewrite = async (selectedText, selection) => {
     // Implement AI rewrite functionality here
@@ -143,31 +142,25 @@ const DocumentEditor = () => {
       gap: 2,
       p: 2 
     }}>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          value={title}
-          onChange={handleTitleChange}
-          onBlur={handleSave}
-          sx={{ maxWidth: 600 }}
-        />
-        <Button 
-          variant="contained" 
-          onClick={handleSave}
-          disabled={saveStatus === 'saving'}
-        >
-          {saveStatus === 'saving' ? 'Saving...' : 'Save'}
-        </Button>
-      </Box>
-
       <Box sx={{ 
         flex: 1, 
         minHeight: 0,
         display: 'flex',
         gap: 2
       }}>
-        <Box sx={{ flex: 1 }}>
+        <Box sx={{ 
+          width: '15%',
+          minWidth: 200,
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          <SceneManager documentId={id} />
+        </Box>
+
+        <Box sx={{ 
+          flex: 1,
+          minWidth: 0,
+        }}>
           <Editor
             ref={editorRef}
             content={content}
@@ -176,7 +169,14 @@ const DocumentEditor = () => {
           />
         </Box>
         
-        <RightPanelManagerMemo {...rightPanelProps} />
+        <Box sx={{ 
+          width: '30%',
+          minWidth: 300,
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          <RightPanelManagerMemo {...rightPanelProps} />
+        </Box>
       </Box>
 
       <Snackbar

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   AppBar, 
   Toolbar, 
@@ -14,12 +14,22 @@ import {
 } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useTitle } from '../contexts/TitleContext';
 
 export default function Layout({ children }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser, signOut } = useAuth();
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const { documentTitle, setDocumentTitle } = useTitle();
+
+  // Reset title when navigating away from document editor
+  useEffect(() => {
+    if (!location.pathname.includes('/documents/')) {
+      setDocumentTitle('Story Editor');
+    }
+  }, [location.pathname, setDocumentTitle]);
 
   const handleNewStory = () => {
     if (!currentUser) {
@@ -56,10 +66,16 @@ export default function Layout({ children }) {
           <Typography 
             variant="h6" 
             component="div" 
-            sx={{ cursor: 'pointer' }}
+            sx={{ 
+              cursor: 'pointer',
+              maxWidth: '50%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
             onClick={() => navigate('/')}
           >
-            Story Editor
+            {documentTitle}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

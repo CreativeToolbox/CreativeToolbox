@@ -12,6 +12,7 @@ import DocumentViewer from './components/documents/DocumentViewer/DocumentViewer
 import AuthPage from './components/auth/AuthPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import { TitleProvider } from './contexts/TitleContext';
 
 // Create router with future flags
 const router = createBrowserRouter(
@@ -53,9 +54,11 @@ const router = createBrowserRouter(
 
 function App() {
   return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <TitleProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </TitleProvider>
   );
 }
 
