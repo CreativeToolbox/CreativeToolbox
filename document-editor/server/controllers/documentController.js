@@ -3,12 +3,17 @@ const Story = require('../models/Story');
 
 exports.createDocument = async (req, res) => {
   try {
+    if (!req.user?.uid) {
+      return res.status(401).json({ message: 'User must be authenticated' });
+    }
+
+    // Create a new empty document with default values
     const document = new Document({
-      title: req.body.title || 'Untitled Story',
-      content: req.body.content || '',
+      title: 'Untitled',
+      content: '',
       userId: req.user.uid,
-      visibility: req.body.visibility || 'private',
-      theme: req.body.theme || {
+      visibility: 'private',
+      theme: {
         mainThemes: [],
         motifs: [],
         symbols: []
@@ -17,9 +22,20 @@ exports.createDocument = async (req, res) => {
 
     const savedDocument = await document.save();
     
-    await Story.createForDocument(savedDocument._id);
+    // Create associated story if needed
+    if (Story) {
+      try {
+        await Story.createForDocument(savedDocument._id);
+      } catch (error) {
+        console.error('Error creating associated story:', error);
+        // Continue even if story creation fails
+      }
+    }
     
-    res.status(201).json(savedDocument);
+    // Return the complete document object
+    const populatedDocument = await Document.findById(savedDocument._id);
+    console.log('Created new document:', populatedDocument);
+    res.status(201).json(populatedDocument);
   } catch (error) {
     console.error('Error creating document:', error);
     res.status(500).json({ 
@@ -42,7 +58,13 @@ exports.getDocuments = async (req, res) => {
 
 exports.getDocument = async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id);
+    const { id } = req.params;
+    
+    if (!id || id === 'undefined') {
+      return res.status(400).json({ message: 'Invalid document ID' });
+    }
+
+    const document = await Document.findById(id);
     if (!document) {
       return res.status(404).json({ message: 'Document not found' });
     }
@@ -53,6 +75,7 @@ exports.getDocument = async (req, res) => {
 
     res.json(document);
   } catch (error) {
+    console.error('Error getting document:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -88,19 +111,31 @@ exports.updateDocument = async (req, res) => {
 
 exports.deleteDocument = async (req, res) => {
   try {
-    const document = await Document.findById(req.params.id);
+    const { id } = req.params;
+    const userId = req.user.uid; // From Firebase auth middleware
+
+    // Find document and verify ownership
+    const document = await Document.findOne({ _id: id, userId });
+    
     if (!document) {
-      return res.status(404).json({ message: 'Document not found' });
+      return res.status(404).json({ 
+        message: 'Document not found or you do not have permission to delete it' 
+      });
     }
 
-    if (!document.isOwner(req.user.uid)) {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
-
-    await document.remove();
-    res.json({ message: 'Document deleted' });
+    // Delete the document
+    await Document.findByIdAndDelete(id);
+    
+    res.json({ 
+      message: 'Document deleted successfully',
+      documentId: id
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error in deleteDocument:', error);
+    res.status(500).json({ 
+      message: 'Failed to delete document',
+      error: error.message 
+    });
   }
 };
 

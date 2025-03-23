@@ -75,53 +75,74 @@ api.interceptors.response.use(
 export const getDocuments = (mode = 'public') => {
   return api.get(`/documents?mode=${mode}`);
 };
-export const getDocument = (id) => api.get(`/documents/${id}`);
-export const createDocument = (data) => api.post('/documents', data);
-export const updateDocument = async (id, data) => {
+export const getDocument = async (id) => {
   try {
-    const user = auth.currentUser;
-    if (!user) {
-      throw new Error('No user logged in');
+    console.log('Fetching document:', id);
+    const response = await api.get(`/documents/${id}`);
+    console.log('Document response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('Error fetching document:', error);
+    throw error;
+  }
+};
+export const createDocument = async (data) => {
+  try {
+    console.log('Creating new document with data:', data);
+    const response = await api.post('/documents', data);
+    console.log('Create document response:', response);
+    
+    if (!response?.data?._id) {
+      throw new Error('Invalid response: No document ID received');
     }
     
-    const token = await user.getIdToken();
-    console.log('Updating document with token:', token.substring(0, 20) + '...');
-    
-    const response = await api.put(`/documents/${id}`, data, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
+    return response;
+  } catch (error) {
+    console.error('Error creating document:', error);
+    throw error;
+  }
+};
+export const updateDocument = async (id, data) => {
+  try {
+    console.log('Updating document:', { id, data });
+    const response = await api.put(`/documents/${id}`, data);
+    console.log('Update response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating document:', error);
     throw error;
   }
 };
-export const deleteDocument = (id) => api.delete(`/documents/${id}`);
+export const deleteDocument = async (id) => {
+  try {
+    console.log('Deleting document:', id);
+    const response = await api.delete(`/documents/${id}`);
+    console.log('Delete response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    throw error;
+  }
+};
 
 // Optional: Add health check endpoint
 export const checkApiHealth = () => api.get('/health');
 
 // Get all characters for a document
-export const getDocumentCharacters = async (documentId) => {
-  return api.get(`/characters/document/${documentId}`);
-};
+export const getDocumentCharacters = (documentId) => 
+  api.get(`/characters/document/${documentId}`);
 
 // Get a single character
-export const getCharacter = async (characterId) => {
-  return api.get(`/characters/${characterId}`);
-};
+export const getCharacter = (characterId) => 
+  api.get(`/characters/${characterId}`);
 
 // Create a new character
 export const createCharacter = async (characterData) => {
   try {
-    console.log('API: Creating character with data:', characterData);
     const response = await api.post('/characters', characterData);
-    console.log('API: Create character response:', response.data);
     return response;
   } catch (error) {
-    console.error('API: Error creating character:', error.response?.data || error.message);
+    console.error('API: Error creating character:', error);
     throw error;
   }
 };
@@ -399,141 +420,38 @@ export const deleteTimelinePeriod = async (documentId, periodId) => {
 };
 
 // Themes endpoints
-export const getTheme = async (documentId) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.get(`/themes/document/${documentId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-};
+export const getTheme = (documentId) => 
+  api.get(`/themes/document/${documentId}`);
 
-export const updateTheme = async (documentId, themeData) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.put(
-    `/themes/document/${documentId}`, 
-    themeData,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const updateTheme = (documentId, themeData) => 
+  api.put(`/themes/document/${documentId}`, themeData);
 
 // Theme-specific endpoints
-export const addMainTheme = async (documentId, themeData) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.post(
-    `/themes/document/${documentId}/main-themes`, 
-    themeData,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const addMainTheme = (documentId, themeData) => 
+  api.post(`/themes/document/${documentId}/main-themes`, themeData);
 
-export const updateMainTheme = async (documentId, themeId, updates) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.put(
-    `/themes/document/${documentId}/main-themes/${themeId}`, 
-    updates,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const updateMainTheme = (documentId, themeId, updates) => 
+  api.put(`/themes/document/${documentId}/main-themes/${themeId}`, updates);
 
-export const deleteMainTheme = async (documentId, themeId) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.delete(
-    `/themes/document/${documentId}/main-themes/${themeId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const deleteMainTheme = (documentId, themeId) => 
+  api.delete(`/themes/document/${documentId}/main-themes/${themeId}`);
 
 // Motifs
-export const addMotif = async (documentId, motifData) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.post(
-    `/themes/document/${documentId}/motifs`, 
-    motifData,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const addMotif = (documentId, motifData) => 
+  api.post(`/themes/document/${documentId}/motifs`, motifData);
 
-export const updateMotif = async (documentId, motifId, updates) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.put(
-    `/themes/document/${documentId}/motifs/${motifId}`, 
-    updates,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const updateMotif = (documentId, motifId, updates) => 
+  api.put(`/themes/document/${documentId}/motifs/${motifId}`, updates);
 
-export const deleteMotif = async (documentId, motifId) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.delete(
-    `/themes/document/${documentId}/motifs/${motifId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const deleteMotif = (documentId, motifId) => 
+  api.delete(`/themes/document/${documentId}/motifs/${motifId}`);
 
 // Symbols
-export const addSymbol = async (documentId, symbolData) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.post(
-    `/themes/document/${documentId}/symbols`, 
-    symbolData,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const addSymbol = (documentId, symbolData) => 
+  api.post(`/themes/document/${documentId}/symbols`, symbolData);
 
-export const updateSymbol = async (documentId, symbolId, updates) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.put(
-    `/themes/document/${documentId}/symbols/${symbolId}`, 
-    updates,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const updateSymbol = (documentId, symbolId, updates) => 
+  api.put(`/themes/document/${documentId}/symbols/${symbolId}`, updates);
 
-export const deleteSymbol = async (documentId, symbolId) => {
-  const token = await auth.currentUser?.getIdToken();
-  return api.delete(
-    `/themes/document/${documentId}/symbols/${symbolId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
-  );
-};
+export const deleteSymbol = (documentId, symbolId) => 
+  api.delete(`/themes/document/${documentId}/symbols/${symbolId}`);

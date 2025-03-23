@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import Editor from './Editor';
+import Editor from './documents/DocumentEditor/Editor';
 import { 
   Paper, 
   TextField, 
@@ -9,13 +9,16 @@ import {
   Box,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Grid
 } from '@mui/material';
 import { getDocument, updateDocument } from '../services/api';
 import SelectionPopup from './SelectionPopup';
 import ToolboxSidebar from './creative-toolbox/ToolboxSidebar';
 import { rewriteText } from '../services/ai';
 import { auth } from '../firebase/config';
+import CreativeToolbox from './creative-toolbox/CreativeToolbox';
+import RightPanelManager from './panels/RightPanelManager';
 
 // Debounce helper function
 const debounce = (func, wait) => {
@@ -265,164 +268,98 @@ export default function DocumentEditor() {
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex',
-      height: '90vh',
-      width: '100%',
-      position: 'relative',
-      px: 0,
-      overflow: 'hidden'
-    }}>
-      <Paper sx={{ 
-        height: '100%',
-        display: 'flex', 
-        flexDirection: 'column',
-        transition: 'width 0.3s ease, margin-right 0.3s ease',
-        width: sidebarOpen ? '30%' : '75%',
-        p: 0,
-        borderRadius: 0,
-        ml: 3,
-        mr: sidebarOpen ? 6 : 2,
-        borderRight: '1px solid',
-        borderColor: 'divider',
-        boxShadow: 'none',
-        overflow: 'hidden',
-        '& .ql-container': {
-          pl: 1,
-          pr: 1
-        }
-      }}>
-        <Box 
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Document Title and Save Button */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 2, 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2
+        }}
+      >
+        <TextField
+          fullWidth
+          variant="standard"
+          placeholder="Document Title"
+          value={currentDoc.title}
+          onChange={handleTitleChange}
           sx={{ 
-            p: 2,
-            pl: 4,
-            borderBottom: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            position: 'sticky',
-            top: 0,
-            zIndex: 1,
-            display: 'flex',
-            gap: 2,
-            alignItems: 'center',
-            borderTopLeftRadius: 4,
-            borderTopRightRadius: 4,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-            '& .MuiTextField-root': {
-              bgcolor: 'background.default',
-              borderRadius: 1,
-            },
-            '& .MuiButton-root': {
-              borderRadius: 1,
-              px: 3,
+            '& .MuiInputBase-input': {
+              fontSize: '1.5rem',
+              fontWeight: 500
             }
           }}
-        >
-          <TextField
-            fullWidth
-            label="Title"
-            value={currentDoc.title || ''}
-            onChange={handleTitleChange}
-            size="small"
-          />
-          <Button 
-            variant="contained" 
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={() => navigate('/')}
-          >
-            Back
-          </Button>
-        </Box>
-        
-        <Box sx={{ 
-          flexGrow: 1,
-          overflow: 'auto',
-          p: 2,
-          pl: 4,
-        }}>
-          <Box sx={{ 
-            height: '100%',
-            '& .quill': { 
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              '& .ql-container': {
-                flexGrow: 1,
-                overflow: 'auto'
-              }
-            } 
-          }}>
-            <Editor
-              ref={editorRef}
-              value={currentDoc.content}
-              onChange={handleContentChange}
-              onAIRewrite={handleAIRewrite}
-              style={{ height: '100%' }}
-            />
-          </Box>
-        </Box>
-
-        {/* Selection Popup */}
-        <SelectionPopup 
-          position={popupPosition}
-          selectedText={selectedText}
-          onClose={() => {
-            setPopupPosition(null);
-            setSelectedText('');
-          }}
-          onRewrite={handleRewrite}
         />
-
-        {/* Save Status Snackbar */}
-        <Snackbar
-          open={!!saveStatus}
-          autoHideDuration={2000}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={saving}
+          sx={{ minWidth: 100 }}
         >
-          <Alert 
-            severity={saveStatus.includes('Error') ? 'error' : 'success'}
-            sx={{ width: '100%' }}
-          >
-            {saveStatus}
-          </Alert>
-        </Snackbar>
-
-        {/* Undo Snackbar */}
-        <Snackbar
-          open={showUndo}
-          autoHideDuration={10000}
-          onClose={() => setShowUndo(false)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-          sx={{ bottom: { xs: 90, sm: 24 } }}
-        >
-          <Alert 
-            severity="info"
-            action={
-              <Button 
-                color="inherit" 
-                size="small" 
-                onClick={handleUndo}
-              >
-                UNDO
-              </Button>
-            }
-          >
-            Text rewritten
-          </Alert>
-        </Snackbar>
+          {saving ? 'Saving...' : saveStatus || 'Save'}
+        </Button>
       </Paper>
 
-      <ToolboxSidebar 
-        documentId={id}
-        enabled={characterTrackingEnabled}
-        onToggle={(isOpen) => setSidebarOpen(isOpen)}
-      />
+      {/* Main Content Area */}
+      <Grid container sx={{ flex: 1, overflow: 'hidden' }}>
+        {/* Left panel - Scene Manager */}
+        <Grid item xs={1.8} sx={{ 
+          height: '100%',
+          borderRight: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box sx={{
+            padding: '1rem',
+            borderBottom: 1,
+            borderColor: 'divider',
+            backgroundColor: 'background.default',
+            fontWeight: 'bold',
+            textAlign: 'center'
+          }}>
+            Scene Manager
+          </Box>
+          {/* Content will go here */}
+        </Grid>
+
+        {/* Main editor area - takes up 55% of the space */}
+        <Grid item xs={6.6}>
+          <Box sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            padding: '0 1rem'
+          }}>
+            <Editor 
+              ref={editorRef}
+              onAIRewrite={handleAIRewrite}
+              onChange={handleContentChange}
+              content={currentDoc.content}
+            />
+          </Box>
+        </Grid>
+
+        {/* Right side panels */}
+        <Grid item xs={3.6} sx={{ 
+          height: '100%',
+          borderLeft: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper'
+        }}>
+          <RightPanelManager 
+            documentId={id}
+            content={currentDoc.content}
+            onContentUpdate={handleContentChange}
+          />
+        </Grid>
+      </Grid>
     </Box>
   );
 }

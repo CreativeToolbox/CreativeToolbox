@@ -216,7 +216,7 @@ const MenuBar = ({ editor, onAIRewrite }) => {
   );
 };
 
-const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
+const Editor = forwardRef(({ onChange, onAIRewrite, content }, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -252,9 +252,11 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
         types: ['textStyle'],
       }),
     ],
-    content: value,
+    content: content || '',
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const newContent = editor.getHTML();
+      console.log('Editor content updated:', newContent);
+      onChange?.(newContent);
     },
     editorProps: {
       attributes: {
@@ -270,10 +272,11 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
   }, [editor, ref]);
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+    if (editor && content !== undefined && content !== editor.getHTML()) {
+      console.log('Syncing editor content with prop:', content);
+      editor.commands.setContent(content || '', false);
     }
-  }, [value, editor]);
+  }, [content, editor]);
 
   return (
     <Box sx={{ 
@@ -291,7 +294,7 @@ const Editor = forwardRef(({ value, onChange, onAIRewrite, ...props }, ref) => {
       <div className="tiptap">
         <MenuBar editor={editor} onAIRewrite={onAIRewrite} />
         <div className="editor-container">
-          <EditorContent editor={editor} {...props} />
+          <EditorContent editor={editor} />
         </div>
       </div>
     </Box>

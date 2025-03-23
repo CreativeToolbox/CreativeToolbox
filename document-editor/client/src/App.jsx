@@ -6,7 +6,7 @@ import {
 } from 'react-router-dom';
 import Layout from './components/Layout';
 import DocumentList from './components/documents/DocumentList/DocumentList';
-import DocumentEditor from './components/DocumentEditor';
+import DocumentEditor from './components/documents/DocumentEditor/DocumentEditor';
 import DocumentViewer from './components/documents/DocumentViewer/DocumentViewer';
 // import SearchPage from './components/SearchPage';         
 import AuthPage from './components/auth/AuthPage';
@@ -34,8 +34,8 @@ const router = createBrowserRouter(
         </PrivateRoute>
       }>
         <Route index element={<DocumentList mode="private" />} />
-        <Route path="documents/:id/edit" element={<DocumentEditor />} />
         <Route path="documents/new" element={<DocumentEditor />} />
+        <Route path="documents/:id/edit" element={<DocumentEditor />} />
       </Route>
     </>
   ), 

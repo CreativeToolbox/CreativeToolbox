@@ -16,9 +16,9 @@
 }
 
 .editor-container {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 .tiptap-content {
@@ -27,10 +27,10 @@
 }
 
 .ProseMirror {
-  outline: none;
-  height: 100%;
-  padding: 16px;
-  overflow-y: auto;
+  min-height: 100%;
+  padding: 1rem;
+  background: white;
+  border-radius: 4px;
 }
 
 .ProseMirror p {
@@ -56,4 +56,6 @@
 .ProseMirror-focused {
   outline: none;
   border: none;
-} 
+}
+
+/* Remove any toggle-related styles */ 

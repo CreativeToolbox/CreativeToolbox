@@ -27,7 +27,7 @@ const documentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Title is required'],
     trim: true,
-    default: 'Untitled Story'
+    default: 'Untitled'
   },
   content: {
     type: String,
