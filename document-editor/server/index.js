@@ -30,6 +30,7 @@ const charactersRouter = require('./routes/characters');
 const plotsRouter = require('./routes/plots');
 const settingsRouter = require('./routes/settings');
 const themesRouter = require('./routes/themes');
+const aiRouter = require('./routes/aiRoutes');
 
 // Mount routes
 console.log('\nMounting Routes...');
@@ -39,6 +40,7 @@ app.use('/api/characters', charactersRouter);
 app.use('/api/plots', plotsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/themes', themesRouter);
+app.use('/api/ai', aiRouter);
 
 // Add a test route
 app.get('/api/health', (req, res) => {
@@ -53,7 +55,8 @@ app.get('/api/routes', (req, res) => {
     stories: storiesRouter.stack.map(r => r.route?.path).filter(Boolean),
     plots: plotsRouter.stack.map(r => r.route?.path).filter(Boolean),
     settings: settingsRouter.stack.map(r => r.route?.path).filter(Boolean),
-    themes: themesRouter.stack.map(r => r.route?.path).filter(Boolean)
+    themes: themesRouter.stack.map(r => r.route?.path).filter(Boolean),
+    ai: aiRouter.stack.map(r => r.route?.path).filter(Boolean)
   };
   res.json(routes);
 });

@@ -16,7 +16,7 @@ const app = express();
 
 // Load all routers with error handling
 console.log('\nLoading Routers...');
-let documentsRouter, charactersRouter, storiesRouter, plotsRouter, settingsRouter, themesRouter;
+let documentsRouter, charactersRouter, storiesRouter, plotsRouter, settingsRouter, themesRouter, aiRouter;
 
 try {
   documentsRouter = require('./routes/documents');
@@ -60,6 +60,14 @@ try {
   console.log('✅ Themes router loaded');
 } catch (error) {
   console.error('❌ Error loading themes router:', error.message);
+  console.error('Error details:', error);
+}
+
+try {
+  aiRouter = require('./routes/aiRoutes');
+  console.log('✅ AI router loaded');
+} catch (error) {
+  console.error('❌ Error loading AI router:', error.message);
   console.error('Error details:', error);
 }
 
@@ -125,6 +133,10 @@ if (settingsRouter) {
 if (themesRouter) {
   app.use('/api/themes', themesRouter);
   console.log('✅ Theme routes mounted at /api/themes');
+}
+if (aiRouter) {
+  app.use('/api/ai', aiRouter);
+  console.log('✅ AI routes mounted at /api/ai');
 }
 
 // Debug routes endpoint
@@ -258,3 +270,4 @@ console.log('Stories Router:', !!storiesRouter);
 console.log('Plots Router:', !!plotsRouter);
 console.log('Settings Router:', !!settingsRouter);
 console.log('Themes Router:', !!themesRouter);
+console.log('AI Router:', !!aiRouter);

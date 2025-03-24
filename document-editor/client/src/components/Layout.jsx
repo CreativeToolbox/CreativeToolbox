@@ -171,7 +171,7 @@ export default function Layout() {
                 }} 
                 onClick={handleTitleClick}
               >
-                {isDocumentEditor ? documentTitle : 'Narrativa'}
+                {isDocumentEditor ? documentTitle : 'Narrative Hub'}
               </Typography>
             )}
           </Box>
