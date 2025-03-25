@@ -149,8 +149,13 @@ const DocumentEditor = () => {
         gap: 2
       }}>
         <Box sx={{ 
+<<<<<<< HEAD
           width: '15%',
           minWidth: 200,
+=======
+          width: '200px',
+          minWidth: '200px',
+>>>>>>> fb4cadb (Update document editor layout and remove sensitive data)
           display: 'flex',
           flexDirection: 'column',
         }}>
@@ -158,8 +163,9 @@ const DocumentEditor = () => {
         </Box>
 
         <Box sx={{ 
-          flex: 1,
-          minWidth: 0,
+          width: '50%',
+          minWidth: '500px',
+          flex: '0 1 auto',
         }}>
           <Editor
             ref={editorRef}
@@ -170,8 +176,13 @@ const DocumentEditor = () => {
         </Box>
         
         <Box sx={{ 
+<<<<<<< HEAD
           width: '30%',
           minWidth: 300,
+=======
+          width: '300px',
+          minWidth: '300px',
+>>>>>>> fb4cadb (Update document editor layout and remove sensitive data)
           display: 'flex',
           flexDirection: 'column',
         }}>
